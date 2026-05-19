@@ -1,13 +1,13 @@
 import { APISettings, APIConfig, RequestLogEntry } from '../types';
 
-const API_SETTINGS_KEY = 'ui-genx-api-settings';
-const REQUEST_LOGS_KEY = 'ui-genx-request-logs';
+const API_SETTINGS_KEY = 'muse-ui-api-settings';
+const REQUEST_LOGS_KEY = 'muse-ui-request-logs';
 
 // Legacy keys for migration
-const LEGACY_API_KEY = 'ui-genx-gemini-api-key';
-const LEGACY_BASE_URL = 'ui-genx-gemini-base-url';
-const LEGACY_TEXT_MODEL = 'ui-genx-text-model';
-const LEGACY_IMAGE_MODEL = 'ui-genx-image-model';
+const LEGACY_API_KEY = 'muse-ui-gemini-api-key';
+const LEGACY_BASE_URL = 'muse-ui-gemini-base-url';
+const LEGACY_TEXT_MODEL = 'muse-ui-text-model';
+const LEGACY_IMAGE_MODEL = 'muse-ui-image-model';
 
 export const DEFAULT_TEXT_MODEL = 'gemini-2.5-flash';
 export const DEFAULT_IMAGE_MODEL = 'nado-banana-2';

@@ -53,7 +53,7 @@ const ReferenceUploader: React.FC<Props> = ({
     setIsDragging(false);
 
     // Check for internal history drag
-    const historyImageUrl = e.dataTransfer.getData('application/x-ui-genx-image');
+    const historyImageUrl = e.dataTransfer.getData('application/x-muse-ui-image');
     if (historyImageUrl) {
         // Convert base64 to File
         try {

@@ -42,7 +42,7 @@ describe('useUIState', () => {
             result.current.toggleDevMode();
         });
         expect(result.current.devMode).toBe(true);
-        expect(localStorage.getItem('ui-genx-devmode')).toBe('true');
+        expect(localStorage.getItem('muse-ui-devmode')).toBe('true');
     });
 
     it('should handle notifications', () => {

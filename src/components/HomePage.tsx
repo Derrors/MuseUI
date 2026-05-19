@@ -8,8 +8,8 @@ import ApiKeyConfig from './ApiKeyConfig';
 import { getStudio } from '../studios';
 
 const HomePage: React.FC = () => {
-    const [lang, setLang] = useState<LangType>(() => (localStorage.getItem('ui-genx-lang') as LangType) || 'zh');
-    const [theme, setTheme] = useState<'dark' | 'light'>(() => (localStorage.getItem('ui-genx-theme') as any) || 'light');
+    const [lang, setLang] = useState<LangType>(() => (localStorage.getItem('muse-ui-lang') as LangType) || 'zh');
+    const [theme, setTheme] = useState<'dark' | 'light'>(() => (localStorage.getItem('muse-ui-theme') as any) || 'light');
     const t = I18N[lang];
     const [projects, setProjects] = useState<Project[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -22,7 +22,7 @@ const HomePage: React.FC = () => {
     const toggleTheme = () => {
         setTheme(prev => {
             const next = prev === 'dark' ? 'light' : 'dark';
-            localStorage.setItem('ui-genx-theme', next);
+            localStorage.setItem('muse-ui-theme', next);
             if (next === 'dark') document.documentElement.classList.add('dark');
             else document.documentElement.classList.remove('dark');
             return next;
@@ -34,7 +34,7 @@ const HomePage: React.FC = () => {
         loadProjects();
     }, []);
 
-    useEffect(() => { localStorage.setItem('ui-genx-lang', lang); }, [lang]);
+    useEffect(() => { localStorage.setItem('muse-ui-lang', lang); }, [lang]);
 
     const loadProjects = async () => {
         setIsLoading(true);
@@ -100,7 +100,7 @@ const HomePage: React.FC = () => {
                                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                                 className="w-12 h-12 rounded-full overflow-hidden hover:shadow-lg transition-shadow"
                             >
-                                <img src="/logo.png" alt="Muse UI" className="w-full h-full object-cover" />
+                                <img src="/logo.png" alt="MuseUI" className="w-full h-full object-cover" />
                             </button>
                             {isMenuOpen && (
                                 <div className="absolute top-14 left-0 w-48 bg-white dark:bg-stone-800 rounded-xl shadow-xl border border-stone-200 dark:border-stone-700 z-50 overflow-hidden">
@@ -121,7 +121,7 @@ const HomePage: React.FC = () => {
                             )}
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold text-stone-800 dark:text-stone-100">Muse UI</h1>
+                            <h1 className="text-2xl font-bold text-stone-800 dark:text-stone-100">MuseUI</h1>
                             <p className="text-xs text-stone-400 dark:text-stone-500">{lang === 'zh' ? '我的项目' : 'My Projects'}</p>
                             <p className="text-stone-500 dark:text-stone-400 text-sm">
                                 {projects.length} {lang === 'zh' ? '个项目' : 'Projects'} · {lang === 'zh' ? '最近更新' : 'Recently updated'}

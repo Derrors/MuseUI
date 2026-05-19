@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in Muse UI.
+Thanks for your interest in MuseUI.
 
 ## Development
 

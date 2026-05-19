@@ -1,6 +1,6 @@
 import { openDB, deleteDB, DBSchema, IDBPDatabase } from 'idb';
 
-interface UIGenXDB extends DBSchema {
+interface MuseUIDB extends DBSchema {
   projects: {
     key: string;
     value: {
@@ -69,11 +69,11 @@ interface UIGenXDB extends DBSchema {
   };
 }
 
-let dbPromise: Promise<IDBPDatabase<UIGenXDB>> | null = null;
+let dbPromise: Promise<IDBPDatabase<MuseUIDB>> | null = null;
 
-export function getDB(): Promise<IDBPDatabase<UIGenXDB>> {
+export function getDB(): Promise<IDBPDatabase<MuseUIDB>> {
   if (!dbPromise) {
-    dbPromise = openDB<UIGenXDB>('ui-genx-db', 4, {
+    dbPromise = openDB<MuseUIDB>('muse-ui-db', 4, {
       upgrade(db) {
         if (!db.objectStoreNames.contains('projects')) {
           const projectStore = db.createObjectStore('projects', { keyPath: 'id' });
@@ -112,7 +112,7 @@ export function getDB(): Promise<IDBPDatabase<UIGenXDB>> {
       if (error.name === 'VersionError') {
         console.warn('IndexedDB version conflict detected. Resetting database...');
         dbPromise = null;
-        return deleteDB('ui-genx-db').then(() => getDB());
+        return deleteDB('muse-ui-db').then(() => getDB());
       }
       throw error;
     });

@@ -52,7 +52,7 @@ export const useProjectState = (
                 const dbProjects = await getProjects();
                 setProjects(dbProjects);
 
-                const savedProjectsData = localStorage.getItem('ui-genx-projects');
+                const savedProjectsData = localStorage.getItem('muse-ui-projects');
                 if (savedProjectsData) setSavedProjects(JSON.parse(savedProjectsData));
 
                 if (initialProjectId) {

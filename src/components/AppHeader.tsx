@@ -53,8 +53,8 @@ const AppHeader: React.FC<Props> = ({
     <>
       <header className="h-14 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 flex items-center justify-between px-4 z-20 shrink-0">
         <a href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-          <img src="/logo.png" alt="Muse UI" className="w-8 h-8 rounded-lg object-cover" />
-          <h1 className="font-bold text-stone-800 dark:text-stone-100 text-lg">Muse UI</h1>
+          <img src="/logo.png" alt="MuseUI" className="w-8 h-8 rounded-lg object-cover" />
+          <h1 className="font-bold text-stone-800 dark:text-stone-100 text-lg">MuseUI</h1>
         </a>
 
         <div className="flex items-center gap-2">

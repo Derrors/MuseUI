@@ -18,7 +18,7 @@ const HistoryGallery: React.FC<Props> = ({ history, onSelect, onDelete, onClear,
 
   const handleDragStart = (e: React.DragEvent, img: GeneratedImage) => {
     e.dataTransfer.effectAllowed = 'copy';
-    e.dataTransfer.setData('application/x-ui-genx-image', img.url);
+    e.dataTransfer.setData('application/x-muse-ui-image', img.url);
   };
 
   return (

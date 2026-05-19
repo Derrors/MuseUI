@@ -6,7 +6,7 @@ Please report security issues privately to the project maintainers. Do not open 
 
 ## Credential Handling
 
-Muse UI is a client-side app. Users configure their own AI provider keys in the browser. Those keys are stored locally by the browser and are not sent to any Muse UI backend.
+MuseUI is a client-side app. Users configure their own AI provider keys in the browser. Those keys are stored locally by the browser and are not sent to any MuseUI backend.
 
 Never commit:
 

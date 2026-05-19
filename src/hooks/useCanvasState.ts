@@ -31,8 +31,8 @@ export const useCanvasState = (
 
             // Restore canvas only if not loading a project
             if (!initialProjectId) {
-                const savedLayout = localStorage.getItem('ui-genx-canvas-layout');
-                const savedGroups = localStorage.getItem('ui-genx-canvas-groups');
+                const savedLayout = localStorage.getItem('muse-ui-canvas-layout');
+                const savedGroups = localStorage.getItem('muse-ui-canvas-groups');
 
                 if (savedLayout) {
                     const layoutItems = JSON.parse(savedLayout) as { id: string, x: number, y: number, width: number, height: number, groupId?: string, label: string }[];
@@ -57,8 +57,8 @@ export const useCanvasState = (
     // Auto-save Canvas State
     useEffect(() => {
         const layoutToSave = artboards.map(({ id, x, y, width, height, groupId, label }) => ({ id, x, y, width, height, groupId, label }));
-        localStorage.setItem('ui-genx-canvas-layout', JSON.stringify(layoutToSave));
-        localStorage.setItem('ui-genx-canvas-groups', JSON.stringify(artboardGroups));
+        localStorage.setItem('muse-ui-canvas-layout', JSON.stringify(layoutToSave));
+        localStorage.setItem('muse-ui-canvas-groups', JSON.stringify(artboardGroups));
     }, [artboards, artboardGroups]);
 
 

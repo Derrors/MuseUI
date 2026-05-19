@@ -33,10 +33,10 @@ export const useUIState = () => {
 
     // Persistence
     useEffect(() => {
-        const savedTheme = localStorage.getItem('ui-genx-theme');
+        const savedTheme = localStorage.getItem('muse-ui-theme');
         if (savedTheme === 'light' || savedTheme === 'dark') setTheme(savedTheme);
 
-        const savedDevMode = localStorage.getItem('ui-genx-devmode');
+        const savedDevMode = localStorage.getItem('muse-ui-devmode');
         if (savedDevMode === 'true') setDevMode(true);
     }, []);
 
@@ -44,12 +44,12 @@ export const useUIState = () => {
         const root = window.document.documentElement;
         if (theme === 'dark') { root.classList.add('dark'); root.style.colorScheme = 'dark'; }
         else { root.classList.remove('dark'); root.style.colorScheme = 'light'; }
-        localStorage.setItem('ui-genx-theme', theme);
+        localStorage.setItem('muse-ui-theme', theme);
     }, [theme]);
 
     // Actions
     const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-    const toggleDevMode = () => { setDevMode(!devMode); localStorage.setItem('ui-genx-devmode', String(!devMode)); };
+    const toggleDevMode = () => { setDevMode(!devMode); localStorage.setItem('muse-ui-devmode', String(!devMode)); };
 
     return {
         // State
