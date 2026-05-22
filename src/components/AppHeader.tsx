@@ -52,10 +52,40 @@ const AppHeader: React.FC<Props> = ({
   return (
     <>
       <header className="h-14 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 flex items-center justify-between px-4 z-20 shrink-0">
-        <a href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-          <img src="/logo.png" alt="MuseUI" className="w-8 h-8 rounded-lg object-cover" />
-          <h1 className="font-bold text-stone-800 dark:text-stone-100 text-lg">MuseUI</h1>
-        </a>
+        <div className="flex items-center gap-3 min-w-0">
+          <a href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
+            <img src="/logo.png" alt="MuseUI" className="w-8 h-8 rounded-lg object-cover" />
+            <h1 className="font-bold text-stone-800 dark:text-stone-100 text-lg">MuseUI</h1>
+          </a>
+          <a
+            href="https://world.guantou.site/"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Visit GuanTou Lab portfolio"
+            className="hidden sm:inline-flex shrink-0 hover:opacity-85 transition-opacity"
+          >
+            <img
+              src={`https://world.guantou.site/badge.svg?theme=${theme === 'dark' ? 'dark' : 'light'}&accent=red&lang=${lang === 'zh' ? 'zh' : 'en'}&size=sm`}
+              alt="GuanTou Lab"
+              width="220"
+              height="52"
+              className="h-[26px] w-[110px]"
+            />
+          </a>
+          <a
+            href="https://sticker.guantou.site/"
+            target="_blank"
+            rel="noreferrer"
+            aria-label={lang === 'zh' ? '打开免费的表情包贴纸生成工具' : 'Open the free sticker maker'}
+            className="hidden xl:inline-flex h-7 max-w-[280px] items-center rounded-full border border-red-200/80 bg-red-50 px-3 text-[11px] font-medium text-red-700 shadow-sm transition-colors hover:border-red-300 hover:bg-red-100 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200 dark:hover:border-red-700 dark:hover:bg-red-950/50"
+          >
+            <span className="truncate">
+              {lang === 'zh'
+                ? '想生成表情包贴纸？这个免费工具也可以用'
+                : 'Need meme stickers? Try this free tool'}
+            </span>
+          </a>
+        </div>
 
         <div className="flex items-center gap-2">
           {currentProject && (

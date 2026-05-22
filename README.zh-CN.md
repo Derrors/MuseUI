@@ -2,6 +2,8 @@
 
 [English](./README.md)
 
+[![GuanTou Lab](https://world.guantou.site/badge.svg?theme=dark&accent=red&lang=zh&size=sm)](https://world.guantou.site/)
+
 MuseUI 是一个纯浏览器运行的 AI 界面与图像设计生成器。它可以根据提示词和参考图，帮助你创建 UI 原型、社交媒体图片、封面、信息图、贴纸、Logo，以及其他视觉草稿。
 
 这个应用是一个静态 Vite + React SPA。它没有后端、没有登录系统，也没有服务器数据库。用户需要在浏览器设置中配置自己的 AI API Key，这些 Key 会保存在用户本地浏览器中。
