@@ -1,7 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { DESIGN_MD_TEMPLATES, getDesignMdById, DesignMdTemplate } from '../skills/designs';
-import { VISUAL_STYLE_TEMPLATES, getVisualStyleById, VisualStyleTemplate } from '../skills/styles';
-import { LAYOUT_DENSITY_TEMPLATES, getLayoutDensityById, LayoutDensityTemplate } from '../skills/layouts';
 import { LangType } from '../types';
 
 // ─── Generic Option Type ───
@@ -36,8 +33,6 @@ interface Props {
     confirmOnSelect?: boolean; // true = click card directly selects; false = preview then confirm
     favoritesKey?: string; // custom localStorage key for favorites in generic mode
 }
-
-type TemplateItem = DesignMdTemplate | VisualStyleTemplate | LayoutDensityTemplate;
 
 const getFavorites = (key: string): string[] => {
     try {
@@ -74,23 +69,14 @@ const DesignMdSelector: React.FC<Props> = ({
 }) => {
     const isGeneric = !!customOptions && customOptions.length > 0;
     const isZh = lang === 'zh';
+    const [loadedTemplates, setLoadedTemplates] = useState<SelectorOption[]>([]);
+    const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
 
     // ── Data source ──
     const templates: SelectorOption[] = useMemo(() => {
         if (isGeneric) return customOptions!;
-        const list = variant === 'design' ? DESIGN_MD_TEMPLATES
-            : variant === 'visual' ? VISUAL_STYLE_TEMPLATES
-            : LAYOUT_DENSITY_TEMPLATES;
-        return list.map(t => ({
-            id: t.id,
-            name: t.name,
-            name_zh: t.name_zh,
-            description: t.description,
-            description_zh: t.description_zh,
-            content: t.content,
-            category: t.category,
-        }));
-    }, [isGeneric, customOptions, variant]);
+        return loadedTemplates;
+    }, [isGeneric, customOptions, loadedTemplates]);
 
     const getById = (id: string): SelectorOption | null => {
         return templates.find(t => t.id === id) || null;
@@ -152,6 +138,46 @@ const DesignMdSelector: React.FC<Props> = ({
         favoritesKey ? getFavorites(favoritesKey) : []
     );
     const selected = selectedId ? getById(selectedId) : null;
+
+    useEffect(() => {
+        if (isGeneric || (!isOpen && !selectedId)) return;
+
+        let isCancelled = false;
+        const loadTemplates = async () => {
+            setIsLoadingTemplates(true);
+            try {
+                const mod: any = variant === 'design'
+                    ? await import('../skills/designs')
+                    : variant === 'visual'
+                        ? await import('../skills/styles')
+                        : await import('../skills/layouts');
+                const list = variant === 'design'
+                    ? mod.DESIGN_MD_TEMPLATES
+                    : variant === 'visual'
+                        ? mod.VISUAL_STYLE_TEMPLATES
+                        : mod.LAYOUT_DENSITY_TEMPLATES;
+
+                if (!isCancelled) {
+                    setLoadedTemplates(list.map((t: any) => ({
+                        id: t.id,
+                        name: t.name,
+                        name_zh: t.name_zh,
+                        description: t.description,
+                        description_zh: t.description_zh,
+                        content: t.content,
+                        category: t.category,
+                    })));
+                }
+            } finally {
+                if (!isCancelled) setIsLoadingTemplates(false);
+            }
+        };
+
+        loadTemplates();
+        return () => {
+            isCancelled = true;
+        };
+    }, [isGeneric, isOpen, selectedId, variant]);
 
     // Lock body scroll
     useEffect(() => {
@@ -369,7 +395,14 @@ const DesignMdSelector: React.FC<Props> = ({
                         <div className={`flex-1 overflow-hidden ${showPreview ? 'flex' : ''}`}>
                             {/* Left: Template Grid */}
                             <div className={`overflow-y-auto p-6 ${showPreview ? 'flex-1' : 'w-full h-full'}`}>
-                                {filteredTemplates.length === 0 ? (
+                                {isLoadingTemplates ? (
+                                    <div className="flex flex-col items-center justify-center h-full text-stone-400 dark:text-stone-600">
+                                        <svg className="w-10 h-10 mb-3 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v3m0 12v3m9-9h-3M6 12H3m15.364-6.364-2.121 2.121M7.757 16.243l-2.121 2.121m12.728 0-2.121-2.121M7.757 7.757 5.636 5.636" />
+                                        </svg>
+                                        <p className="text-sm font-medium">{isZh ? '正在加载模板' : 'Loading templates'}</p>
+                                    </div>
+                                ) : filteredTemplates.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center h-full text-stone-400 dark:text-stone-600">
                                         <svg className="w-12 h-12 mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

@@ -31,6 +31,7 @@ describe('useProjectState', () => {
     it('should handle creating a project', async () => {
         const mockNewProject = { id: 'new-p', name: 'New Project' };
         const mockSavedProject = { ...mockNewProject, config: {}, artboards: [] };
+        const configState = { platform: 'pc', description: 'Saved description' };
 
         (projectService.createProject as any).mockResolvedValue(mockNewProject);
         (projectService.saveProject as any).mockResolvedValue(mockSavedProject);
@@ -38,11 +39,15 @@ describe('useProjectState', () => {
         const { result } = renderHook(() => useProjectState(lang, mockAddNotification, mockSetArtboards));
 
         await act(async () => {
-            await result.current.handleSaveProject('New Project', 'Desc', {}, []);
+            await result.current.handleSaveProject('New Project', 'Desc', configState, []);
         });
 
         expect(projectService.createProject).toHaveBeenCalledWith({ name: 'New Project', description: 'Desc' });
-        expect(projectService.saveProject).toHaveBeenCalled(); // Should save initial state
+        expect(projectService.saveProject).toHaveBeenCalledWith('new-p', {
+            config: configState,
+            artboards: [],
+            thumbnailUrl: undefined,
+        });
         expect(mockAddNotification).toHaveBeenCalledWith('项目已创建', 'success');
         expect(result.current.currentProjectId).toBe('new-p');
     });

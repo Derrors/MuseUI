@@ -6,7 +6,7 @@ import { useProjectState } from './useProjectState';
 import { useCanvasState } from './useCanvasState';
 import { useGenerationLogic } from './useGenerationLogic';
 import { getAssetDetails } from '../services/idbHistoryService';
-import { AppConfigExport } from '../types';
+import { AppConfigExport, Project } from '../types';
 import html2canvas from 'html2canvas';
 
 export const useAppLogic = (initialProjectId?: string) => {
@@ -17,86 +17,63 @@ export const useAppLogic = (initialProjectId?: string) => {
     // 2. Canvas State (Needs UI for notifications)
     const canvas = useCanvasState(ui.lang, initialProjectId, ui.addNotification, (msg) => ui.addNotification(msg || 'Error', 'error'));
 
-    // 3. Project State 
-    const project = useProjectState(ui.lang, ui.addNotification, canvas.setArtboards, initialProjectId);
-
-    // 4. Config State
+    // 3. Config State
     const config = useConfigState();
+
+    const hasConfigValue = (source: Record<string, unknown>, key: string) =>
+        Object.prototype.hasOwnProperty.call(source, key);
+
+    const restoreConfigSnapshot = (snapshot?: Record<string, any> | null) => {
+        if (!snapshot) return;
+
+        if (hasConfigValue(snapshot, 'platform')) config.setPlatform(snapshot.platform);
+        if (hasConfigValue(snapshot, 'resolution')) config.setResolution(snapshot.resolution);
+        if (hasConfigValue(snapshot, 'customSize')) config.setCustomSize(snapshot.customSize);
+        if (hasConfigValue(snapshot, 'customStyles')) config.setCustomStyles(snapshot.customStyles || []);
+        if (hasConfigValue(snapshot, 'style')) config.setStyle(snapshot.style);
+        if (hasConfigValue(snapshot, 'description')) config.setDescription(snapshot.description || '');
+        if (hasConfigValue(snapshot, 'pageName')) config.setPageName(snapshot.pageName || '');
+        if (hasConfigValue(snapshot, 'keywords')) config.setKeywords(snapshot.keywords || []);
+        if (hasConfigValue(snapshot, 'enableDesignTokens')) config.setEnableDesignTokens(!!snapshot.enableDesignTokens);
+        if (hasConfigValue(snapshot, 'designTokens')) config.setDesignTokens(snapshot.designTokens);
+        if (hasConfigValue(snapshot, 'background')) config.setBackground(snapshot.background);
+        if (hasConfigValue(snapshot, 'highQuality')) config.setHighQuality(!!snapshot.highQuality);
+        if (hasConfigValue(snapshot, 'forceChinese')) config.setForceChinese(!!snapshot.forceChinese);
+        if (hasConfigValue(snapshot, 'promptLanguage')) config.setPromptLanguage(snapshot.promptLanguage ?? null);
+        if (hasConfigValue(snapshot, 'preferredImageApiId')) config.setPreferredImageApiId(snapshot.preferredImageApiId ?? null);
+        if (hasConfigValue(snapshot, 'designMdId')) config.setDesignMdId(snapshot.designMdId ?? null);
+        if (hasConfigValue(snapshot, 'designMdContent')) config.setDesignMdContent(snapshot.designMdContent ?? null);
+        if (hasConfigValue(snapshot, 'visualStyleId')) config.setVisualStyleId(snapshot.visualStyleId ?? null);
+        if (hasConfigValue(snapshot, 'visualStyleContent')) config.setVisualStyleContent(snapshot.visualStyleContent ?? null);
+        if (hasConfigValue(snapshot, 'layoutDensityId')) config.setLayoutDensityId(snapshot.layoutDensityId ?? null);
+        if (hasConfigValue(snapshot, 'layoutDensityContent')) config.setLayoutDensityContent(snapshot.layoutDensityContent ?? null);
+        if (hasConfigValue(snapshot, 'isBatchMode')) config.setIsBatchMode(!!snapshot.isBatchMode);
+        if (hasConfigValue(snapshot, 'batchOutputMode')) config.setBatchOutputMode(snapshot.batchOutputMode);
+        if (hasConfigValue(snapshot, 'specMode')) config.setSpecMode(snapshot.specMode);
+        if (hasConfigValue(snapshot, 'pages')) config.setPages(snapshot.pages || []);
+        if (hasConfigValue(snapshot, 'mediaAspectRatio')) config.setMediaAspectRatio(snapshot.mediaAspectRatio);
+        if (hasConfigValue(snapshot, 'mediaResolution')) config.setMediaResolution(snapshot.mediaResolution);
+        if (hasConfigValue(snapshot, 'mediaType')) config.setMediaType(snapshot.mediaType);
+        if (hasConfigValue(snapshot, 'activeRole')) config.setActiveRole(snapshot.activeRole);
+        if (hasConfigValue(snapshot, 'skillMode')) config.setSkillMode(!!snapshot.skillMode);
+        if (hasConfigValue(snapshot, 'activeSkill')) config.setActiveSkill(snapshot.activeSkill ?? null);
+        if (hasConfigValue(snapshot, 'skillConfig')) config.setSkillConfig(snapshot.skillConfig ?? null);
+        if (hasConfigValue(snapshot, 'layoutImage')) canvas.updateLayoutImage(snapshot.layoutImage ?? null);
+        if (hasConfigValue(snapshot, 'layoutElements')) canvas.setLayoutElements(snapshot.layoutElements || []);
+    };
+
+    const restoreProjectConfig = (p: Project) => {
+        restoreConfigSnapshot(p.config as Record<string, any> | undefined);
+    };
+
+    // 4. Project State
+    const project = useProjectState(ui.lang, ui.addNotification, canvas.setArtboards, initialProjectId, restoreProjectConfig);
 
     // 5. Generation Logic (Aggregates everything)
     const gen = useGenerationLogic(ui.lang, config, canvas);
 
     const [isBuilderOpen, setIsBuilderOpen] = useState(false);
     const [activePageBuilderId, setActivePageBuilderId] = useState<string | null>(null);
-
-    // --- Sync Logic (Facade Glue) ---
-
-    // Project Loading Side-effects (Restoring Config)
-    // useProjectState loads the project and hydrates Artboards, but returns the project object.
-    // We need to catch that and restore Config.
-    // Since we can't easily hook into the internal async of useProjectState without callbacks, 
-    // we can use an Effect or modify useProjectState to accept a callback.
-    // HOWEVER, useProjectState exposes `handleLoadProject`. We can wrap it here.
-
-    const restoreProjectConfig = (p: any) => {
-        if (p.config) {
-            const c = p.config;
-            if (c.platform) config.setPlatform(c.platform);
-            if (c.resolution) config.setResolution(c.resolution);
-            if (c.style) config.setStyle(c.style);
-            if (c.description) config.setDescription(c.description);
-            if (c.pageName) config.setPageName(c.pageName);
-            if (c.keywords) config.setKeywords(c.keywords || []);
-            if (c.keywords) config.setKeywords(c.keywords || []);
-            if (c.designTokens) config.setDesignTokens(c.designTokens);
-            if (c.designMdId) config.setDesignMdId(c.designMdId);
-            if (c.designMdContent) config.setDesignMdContent(c.designMdContent);
-            if (c.visualStyleId) config.setVisualStyleId(c.visualStyleId);
-            if (c.visualStyleContent) config.setVisualStyleContent(c.visualStyleContent);
-            if (c.layoutDensityId) config.setLayoutDensityId(c.layoutDensityId);
-            if (c.layoutDensityContent) config.setLayoutDensityContent(c.layoutDensityContent);
-            if (c.promptLanguage !== undefined) config.setPromptLanguage(c.promptLanguage);
-            if (c.preferredImageApiId !== undefined) config.setPreferredImageApiId(c.preferredImageApiId);
-        }
-    };
-
-    // Override handleLoadProject to also restore Config
-    const handleLoadProjectWrapper = async (pid: string) => {
-        const p = await project.handleLoadProject(pid);
-        if (p) restoreProjectConfig(p);
-    };
-
-    // Initial Load Effect (if ID provided) is handled inside useProjectState, 
-    // BUT we need to restore config. useProjectState enables the artboards, 
-    // but we need to fetch the project again or expose it?
-    // Actually useProjectState calls getProjectById. 
-    // Let's rely on useProjectState's internal effect calling handleLoadProject?
-    // Wait, useProjectState's internal Effect calls its OWN handleLoadProject.
-    // We need to intercept that result.
-    // EASIER FIX: Pass a `onProjectLoaded` callback to useProjectState. 
-    // But I can't change useProjectState signature easily without breaking the tool call I just made?
-    // Actually I can edit it.
-    // OR: I can just put a simple Effect here watching `project.currentProjectId`?
-    // But then I need the project data. `project.projects` has the list.
-
-    // Better: We wrap the actions. For the initial load, we might miss the config restore if we don't watch it.
-    // Let's use `project.projects` change to find the current one? No, `projects` is the list.
-
-    // Use an Effect in Facade: When `project.currentProjectId` changes, find it in `project.projects` (if loaded) and restore? 
-    // But `projects` list might be just summary. We need detail.
-    // Let's modify `useProjectState` to expose the `loadedProject` or `onLoad` callback.
-    // For now, let's keep it simple: `handleLoadProjectWrapper` is used for explicit actions.
-    // For the initial ID load, we might need `useProjectState` to export the data it fetched?
-    // Refactoring `useProjectState` slightly is safer. For now let's assume `handleLoadProject` returns the project 
-    // and we can't easily intercept the *initial* useEffect call inside it.
-    // ==> Modify `useProjectState.ts` to accept `onProjectLoaded` callback is best.
-
-    // WORKAROUND without editing `useProjectState`:
-    useEffect(() => {
-        if (initialProjectId && project.projects.length > 0) {
-            // This relies on projects being loaded.
-        }
-    }, [initialProjectId]);
 
 
     // --- Estimated Tokens Logic (Legacy) ---
@@ -118,13 +95,21 @@ export const useAppLogic = (initialProjectId?: string) => {
     // Define current config object helper
     const currentConfigObject = {
         platform: config.platform, resolution: config.resolution, customSize: config.customSize, style: config.style,
+        customStyles: config.customStyles,
         description: config.description, pageName: config.pageName, keywords: config.keywords, enableDesignTokens: config.enableDesignTokens,
         designTokens: config.designTokens, background: config.background, highQuality: config.highQuality,
+        forceChinese: config.forceChinese,
         promptLanguage: config.promptLanguage, preferredImageApiId: config.preferredImageApiId,
         designMdId: config.designMdId, designMdContent: config.designMdContent,
         visualStyleId: config.visualStyleId, visualStyleContent: config.visualStyleContent,
-        layoutDensityId: config.layoutDensityId, layoutDensityContent: config.layoutDensityContent
+        layoutDensityId: config.layoutDensityId, layoutDensityContent: config.layoutDensityContent,
+        isBatchMode: config.isBatchMode, batchOutputMode: config.batchOutputMode, specMode: config.specMode, pages: config.pages,
+        activeRole: config.activeRole,
+        mediaAspectRatio: config.mediaAspectRatio, mediaResolution: config.mediaResolution, mediaType: config.mediaType,
+        skillMode: config.skillMode, activeSkill: config.activeSkill, skillConfig: config.skillConfig,
+        layoutImage: canvas.layoutImage, layoutElements: canvas.layoutElements,
     };
+    const currentConfigString = JSON.stringify(currentConfigObject);
 
     useEffect(() => {
         if (!project.currentProjectId) return;
@@ -132,11 +117,7 @@ export const useAppLogic = (initialProjectId?: string) => {
 
         const currentStateString = JSON.stringify({
             artboards: canvas.artboards.map(a => ({ id: a.id, x: a.x, y: a.y, w: a.width, h: a.height })),
-            config: {
-                d: config.description,
-                p: config.platform,
-                s: config.style
-            }
+            config: currentConfigObject
         });
 
         if (lastSavedRef.current === currentStateString) return;
@@ -174,8 +155,8 @@ export const useAppLogic = (initialProjectId?: string) => {
     }, [
         project.currentProjectId, 
         project.isLoadingProject,
-        canvas.artboards, 
-        config.description, config.platform, config.style, config.resolution // Add more deps as needed
+        canvas.artboards,
+        currentConfigString
     ]);
 
 
@@ -183,19 +164,14 @@ export const useAppLogic = (initialProjectId?: string) => {
     const handleExportConfig = async () => {
         const exportData: AppConfigExport = {
             version: 1, timestamp: Date.now(),
-            platform: config.platform, resolution: config.resolution, customSize: config.customSize,
-            description: config.description, pageName: config.pageName, keywords: config.keywords,
-            style: config.style, customStyles: config.customStyles, enableDesignTokens: config.enableDesignTokens,
-            designTokens: config.designTokens, background: config.background, highQuality: config.highQuality,
-            forceChinese: config.forceChinese,
-            promptLanguage: config.promptLanguage, preferredImageApiId: config.preferredImageApiId,
-            designMdId: config.designMdId || undefined, designMdContent: config.designMdContent || undefined,
-            visualStyleId: config.visualStyleId || undefined, visualStyleContent: config.visualStyleContent || undefined,
-            layoutDensityId: config.layoutDensityId || undefined, layoutDensityContent: config.layoutDensityContent || undefined,
-            isBatchMode: config.isBatchMode, batchOutputMode: config.batchOutputMode,
-            specMode: config.specMode, pages: config.pages,
+            ...currentConfigObject,
+            designMdId: currentConfigObject.designMdId || undefined,
+            designMdContent: currentConfigObject.designMdContent || undefined,
+            visualStyleId: currentConfigObject.visualStyleId || undefined,
+            visualStyleContent: currentConfigObject.visualStyleContent || undefined,
+            layoutDensityId: currentConfigObject.layoutDensityId || undefined,
+            layoutDensityContent: currentConfigObject.layoutDensityContent || undefined,
             styleImages: [], contentImages: [], // TODO: support images
-            layoutImage: canvas.layoutImage, layoutElements: canvas.layoutElements
         };
         // Download logic...
         const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
@@ -211,16 +187,7 @@ export const useAppLogic = (initialProjectId?: string) => {
         reader.onload = async (ev) => {
             try {
                 const data: AppConfigExport = JSON.parse(ev.target?.result as string);
-                if (data.platform) config.setPlatform(data.platform);
-                if (data.resolution) config.setResolution(data.resolution);
-                // ... map all fields ...
-                if (data.description) config.setDescription(data.description);
-                if (data.pages) config.setPages(data.pages);
-                if (data.designMdId) { config.setDesignMdId(data.designMdId); config.setDesignMdContent(data.designMdContent || null); }
-                if (data.visualStyleId) { config.setVisualStyleId(data.visualStyleId); config.setVisualStyleContent(data.visualStyleContent || null); }
-                if (data.layoutDensityId) { config.setLayoutDensityId(data.layoutDensityId); config.setLayoutDensityContent(data.layoutDensityContent || null); }
-                if (data.promptLanguage !== undefined) config.setPromptLanguage(data.promptLanguage);
-                if (data.preferredImageApiId !== undefined) config.setPreferredImageApiId(data.preferredImageApiId);
+                restoreConfigSnapshot(data as unknown as Record<string, any>);
 
                 ui.addNotification(ui.lang === 'zh' ? '配置导入成功' : 'Configuration imported successfully', 'success');
             } catch (error) {
@@ -246,43 +213,14 @@ export const useAppLogic = (initialProjectId?: string) => {
             handleSaveProject: (name: string, thumbnail?: string) => project.handleSaveProject(
                 name,
                 config.description,
-                {
-                    platform: config.platform, resolution: config.resolution, customSize: config.customSize, style: config.style,
-                    description: config.description, pageName: config.pageName, keywords: config.keywords, enableDesignTokens: config.enableDesignTokens,
-                    designTokens: config.designTokens, background: config.background, highQuality: config.highQuality,
-                    promptLanguage: config.promptLanguage, preferredImageApiId: config.preferredImageApiId,
-                    designMdId: config.designMdId, designMdContent: config.designMdContent,
-                    visualStyleId: config.visualStyleId, visualStyleContent: config.visualStyleContent,
-                    layoutDensityId: config.layoutDensityId, layoutDensityContent: config.layoutDensityContent
-                },
+                currentConfigObject,
                 canvas.artboards,
                 thumbnail
             ),
             handleCreateBlankProject: () => project.handleCreateBlankProject(),
             handleUpdateProjectContent: (id: string, thumbnail?: string, configOverride?: any) => project.handleUpdateProjectContent(
                 id,
-                {
-                    ...(configOverride || {}),
-                    platform: configOverride?.platform || config.platform,
-                    resolution: configOverride?.resolution || config.resolution,
-                    customSize: configOverride?.customSize || config.customSize,
-                    style: configOverride?.style || config.style,
-                    description: configOverride?.description || config.description,
-                    pageName: configOverride?.pageName || config.pageName,
-                    keywords: configOverride?.keywords || config.keywords,
-                    enableDesignTokens: configOverride?.enableDesignTokens !== undefined ? configOverride.enableDesignTokens : config.enableDesignTokens,
-                    designTokens: configOverride?.designTokens || config.designTokens,
-                    background: configOverride?.background || config.background,
-                    highQuality: configOverride?.highQuality !== undefined ? configOverride.highQuality : config.highQuality,
-                    promptLanguage: configOverride?.promptLanguage !== undefined ? configOverride.promptLanguage : config.promptLanguage,
-                    preferredImageApiId: configOverride?.preferredImageApiId !== undefined ? configOverride.preferredImageApiId : config.preferredImageApiId,
-                    designMdId: configOverride?.designMdId || config.designMdId,
-                    designMdContent: configOverride?.designMdContent || config.designMdContent,
-                    visualStyleId: configOverride?.visualStyleId || config.visualStyleId,
-                    visualStyleContent: configOverride?.visualStyleContent || config.visualStyleContent,
-                    layoutDensityId: configOverride?.layoutDensityId || config.layoutDensityId,
-                    layoutDensityContent: configOverride?.layoutDensityContent || config.layoutDensityContent
-                },
+                { ...currentConfigObject, ...(configOverride || {}) },
                 canvas.artboards,
                 thumbnail,
                 false // Explicit Manual Save -> Updates State & Notifies

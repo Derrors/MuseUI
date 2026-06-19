@@ -38,18 +38,21 @@ describe('useAppLogic', () => {
         (projectService.createProject as any).mockResolvedValue({ id: 'new-id-1', name: 'Untitled Project', artboards: [] });
     });
 
-    it('should initialize with default values', () => {
+    it('should initialize with default values', async () => {
         const { result } = renderHook(() => useAppLogic());
 
         // Check key logic state initialization
         expect(result.current.state.platform).toBe('mobile');
         expect(result.current.state.artboards).toEqual([]);
+        await waitFor(() => {
+            expect(result.current.state.currentProjectId).toBe('new-id-1');
+        });
     });
 
     it('should load project and hydrate artboards', async () => {
         const mockProject = {
             id: 'p-1',
-            config: { platform: 'pc' },
+            config: { platform: 'pc', description: 'Restored description' },
             artboards: [
                 {
                     id: 'ab-1',
@@ -67,19 +70,12 @@ describe('useAppLogic', () => {
             await result.current.actions.handleLoadProject('p-1');
         });
 
-        // Test manual update works (Facade wiring valid)
-        act(() => {
-            result.current.actions.setPlatform('pc');
+        await waitFor(() => {
+            expect(result.current.state.platform).toBe('pc');
+            expect(result.current.state.description).toBe('Restored description');
+            expect(result.current.state.artboards).toHaveLength(1);
         });
-        expect(result.current.state.platform).toBe('pc');
     });
-
-    /*
-    // TODO: Fix integration test timing for handleLoadProject restoration
-    await waitFor(() => {
-         // expect(result.current.state.platform).toBe('pc'); 
-    });
-    */
 
 
     it('should save project', async () => {

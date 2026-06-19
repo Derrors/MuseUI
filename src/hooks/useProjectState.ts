@@ -1,13 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Project, SavedProject, LangType, Artboard } from '../types';
 import { getProjects, createProject, getProjectById, saveProject, deleteProject } from '../services/idbProjectService';
-import { getHistory } from '../services/idbHistoryService';
 
-// Helper to hydrate artboards will be needed here or passed in. 
-// Since hydrate logic depends on generic 'Artboard' type, we can keep it here or in a util. 
-// For now, let's keep a simplified version or assume the service handles deep hydration? 
-// Actually, useAppLogic had 'hydrateArtboardsFromProject'. We should duplicate or move it.
-// Let's create a utils file later if needed, for now include it.
+type ProjectLoadedCallback = (project: Project) => void;
 
 const hydrateArtboardsFromProject = (project: any): Artboard[] => {
     const dbArtboards = project.artboards || [];
@@ -37,7 +32,8 @@ export const useProjectState = (
     lang: LangType,
     addNotification: (msg: string, type?: 'success' | 'error') => void,
     setArtboards: (val: Artboard[] | ((prev: Artboard[]) => Artboard[])) => void,
-    initialProjectId?: string
+    initialProjectId?: string,
+    onProjectLoaded?: ProjectLoadedCallback
 ) => {
     const [projects, setProjects] = useState<Project[]>([]);
     const [savedProjects, setSavedProjects] = useState<SavedProject[]>([]);
@@ -82,16 +78,10 @@ export const useProjectState = (
             const project = await getProjectById(projectId);
             if (!project) return;
 
-            // Return project data so parent can set config
-            // We can't set config here easily without circular dep or passing huge object of setters
-            // So we will return the Loaded Project config and let the parent (useAppLogic) handle the Config restoration.
-            // But we CAN handle Artboards here if we passed setArtboards.
-
-            // Restore Artboards
             const hydrated = hydrateArtboardsFromProject(project);
             setArtboards(hydrated);
+            onProjectLoaded?.(project);
 
-            // Update projects list with loaded details
             setProjects(prev => {
                 const idx = prev.findIndex(p => p.id === projectId);
                 if (idx > -1) {
@@ -121,7 +111,7 @@ export const useProjectState = (
             });
 
             const savedProject = await saveProject(newProject.id, {
-                config: {},
+                config: configState,
                 artboards,
                 thumbnailUrl: thumbnailUrl || undefined
             });

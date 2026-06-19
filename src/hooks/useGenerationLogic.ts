@@ -3,15 +3,7 @@ import { GeneratedImage, GenerationConfig, LayoutElement, DesignSystem } from '.
 import { extractStyleFromImages, generatePageList, constructPrompt, generateDesignSpecJson, generateUIReference, analyzeLayoutImage, optimizeDescription } from '../services/geminiService';
 import { getAPISettings } from '../services/apiKeyStore';
 import { LangType } from '../types';
-import { buildSkillPrompt, SkillConstants } from '../skills/promptBuilders';
-import * as CoverConstants from '../skills/cover-image/constants';
-import * as InfographicConstants from '../skills/infographic/constants';
-import * as XHSConstants from '../skills/xhs-images/constants';
-import * as ComicConstants from '../skills/comic/constants';
-import * as ArticleConstants from '../skills/article-illustrator/constants';
-import * as SlideConstants from '../skills/slide-deck/constants';
-import * as LogoConstants from '../skills/logo/constants';
-import * as StickerConstants from '../skills/sticker-design/constants';
+import type { SkillConstants } from '../skills/promptBuilders';
 
 const getAspectRatio = (width: number, height: number): string => {
     const ratio = width / height;
@@ -359,61 +351,84 @@ export const useGenerationLogic = (
     };
 
     // --- Skill Constants Aggregator ---
-    const getSkillConstants = (): SkillConstants => ({
-        coverImage: {
-            types: CoverConstants.COVER_TYPES,
-            palettes: CoverConstants.COVER_PALETTES,
-            renderings: CoverConstants.COVER_RENDERINGS,
-            texts: CoverConstants.COVER_TEXTS,
-            moods: CoverConstants.COVER_MOODS,
-            fonts: CoverConstants.COVER_FONTS,
-        },
-        infographic: {
-            layouts: InfographicConstants.INFOGRAPHIC_LAYOUTS,
-            styles: InfographicConstants.INFOGRAPHIC_STYLES,
-        },
-        xhsImages: {
-            styles: XHSConstants.XHS_STYLES,
-            layouts: XHSConstants.XHS_LAYOUTS,
-            strategies: XHSConstants.XHS_STRATEGIES,
-        },
-        comic: {
-            artStyles: ComicConstants.COMIC_ART_STYLES,
-            tones: ComicConstants.COMIC_TONES,
-            layouts: ComicConstants.COMIC_LAYOUTS,
-            presets: ComicConstants.COMIC_PRESETS,
-        },
-        articleIllustrator: {
-            types: ArticleConstants.ARTICLE_TYPES,
-            styles: ArticleConstants.ARTICLE_STYLES,
-            densities: ArticleConstants.ARTICLE_DENSITIES,
-        },
-        slideDeck: {
-            presets: SlideConstants.SLIDE_PRESETS,
-            audiences: SlideConstants.SLIDE_AUDIENCES,
-        },
-        logo: {
-            types: LogoConstants.LOGO_TYPES,
-            styles: LogoConstants.LOGO_STYLES,
-            palettes: LogoConstants.LOGO_PALETTES,
-            industries: LogoConstants.LOGO_INDUSTRIES,
-            moods: LogoConstants.LOGO_MOODS,
-        },
-        stickerDesign: {
-            styles: StickerConstants.STICKER_STYLES,
-            shapes: StickerConstants.STICKER_SHAPES,
-            themes: StickerConstants.STICKER_THEMES,
-            sizes: StickerConstants.STICKER_SIZES,
-            backgrounds: StickerConstants.STICKER_BACKGROUNDS,
-        },
-    });
+    const loadSkillPrompting = async () => {
+        const [
+            promptBuilders,
+            CoverConstants,
+            InfographicConstants,
+            XHSConstants,
+            ComicConstants,
+            ArticleConstants,
+            SlideConstants,
+            LogoConstants,
+            StickerConstants,
+        ] = await Promise.all([
+            import('../skills/promptBuilders'),
+            import('../skills/cover-image/constants'),
+            import('../skills/infographic/constants'),
+            import('../skills/xhs-images/constants'),
+            import('../skills/comic/constants'),
+            import('../skills/article-illustrator/constants'),
+            import('../skills/slide-deck/constants'),
+            import('../skills/logo/constants'),
+            import('../skills/sticker-design/constants'),
+        ]);
+
+        const constants: SkillConstants = {
+            coverImage: {
+                types: CoverConstants.COVER_TYPES,
+                palettes: CoverConstants.COVER_PALETTES,
+                renderings: CoverConstants.COVER_RENDERINGS,
+                texts: CoverConstants.COVER_TEXTS,
+                moods: CoverConstants.COVER_MOODS,
+                fonts: CoverConstants.COVER_FONTS,
+            },
+            infographic: {
+                layouts: InfographicConstants.INFOGRAPHIC_LAYOUTS,
+                styles: InfographicConstants.INFOGRAPHIC_STYLES,
+            },
+            xhsImages: {
+                styles: XHSConstants.XHS_STYLES,
+                layouts: XHSConstants.XHS_LAYOUTS,
+                strategies: XHSConstants.XHS_STRATEGIES,
+            },
+            comic: {
+                artStyles: ComicConstants.COMIC_ART_STYLES,
+                tones: ComicConstants.COMIC_TONES,
+                layouts: ComicConstants.COMIC_LAYOUTS,
+                presets: ComicConstants.COMIC_PRESETS,
+            },
+            articleIllustrator: {
+                types: ArticleConstants.ARTICLE_TYPES,
+                styles: ArticleConstants.ARTICLE_STYLES,
+                densities: ArticleConstants.ARTICLE_DENSITIES,
+            },
+            slideDeck: {
+                presets: SlideConstants.SLIDE_PRESETS,
+                audiences: SlideConstants.SLIDE_AUDIENCES,
+            },
+            logo: {
+                types: LogoConstants.LOGO_TYPES,
+                styles: LogoConstants.LOGO_STYLES,
+                palettes: LogoConstants.LOGO_PALETTES,
+                industries: LogoConstants.LOGO_INDUSTRIES,
+                moods: LogoConstants.LOGO_MOODS,
+            },
+            stickerDesign: {
+                styles: StickerConstants.STICKER_STYLES,
+                shapes: StickerConstants.STICKER_SHAPES,
+                themes: StickerConstants.STICKER_THEMES,
+                sizes: StickerConstants.STICKER_SIZES,
+                backgrounds: StickerConstants.STICKER_BACKGROUNDS,
+            },
+        };
+
+        return { buildSkillPrompt: promptBuilders.buildSkillPrompt, constants };
+    };
 
     // --- Skill Mode: Single Image Generation ---
     const handleSkillSingleGeneration = async (skillType: string, skillConfig: any, currentProjectId: string | null) => {
         setIsGenerating(true); setProgressValue(20); setError(null);
-        const constants = getSkillConstants();
-        const prompt = buildSkillPrompt(skillType as any, config.description, skillConfig, constants);
-        const promptStr = typeof prompt === 'string' ? prompt : prompt.prompt;
 
         // Resolve skill-specific resolution override
         let skillResolution = effectiveResolution;
@@ -440,6 +455,10 @@ export const useGenerationLogic = (
         }
 
         try {
+            const { buildSkillPrompt, constants } = await loadSkillPrompting();
+            const prompt = buildSkillPrompt(skillType as any, config.description, skillConfig, constants);
+            const promptStr = typeof prompt === 'string' ? prompt : prompt.prompt;
+
             const genConfig: GenerationConfig = {
                 platform: config.platform, resolution: skillResolution, customSize: { width: skillResolution.width, height: skillResolution.height, active: true },
                 style: config.style, description: config.description, pageName: config.pageName || 'Skill Output',
@@ -486,8 +505,6 @@ export const useGenerationLogic = (
     // --- Skill Mode: Multi-Image Sequence Generation ---
     const handleSkillSequenceGeneration = async (skillType: string, skillConfig: any, currentProjectId: string | null) => {
         setIsGenerating(true); setError(null); setProgressValue(0);
-        const constants = getSkillConstants();
-        const batchId = `skill-${skillType}-${Date.now()}`;
 
         const pages = config.pages;
         const pageCount = pages.length;
@@ -497,6 +514,7 @@ export const useGenerationLogic = (
             return;
         }
 
+        const batchId = `skill-${skillType}-${Date.now()}`;
         let refImage: string | undefined = undefined;
         const groupX = 50 + (canvas.artboardGroups.length * 100);
         const groupY = 50 + (canvas.artboardGroups.length * 100);
@@ -506,6 +524,8 @@ export const useGenerationLogic = (
         canvas.setArtboardGroups(prev => [...prev, { id: batchId, label: `${skillType} - ${groupLabel}`, x: groupX, y: groupY, width: 0, height: 0 }]);
 
         try {
+            const { buildSkillPrompt, constants } = await loadSkillPrompting();
+
             for (let i = 0; i < pageCount; i++) {
                 const page = pages[i];
                 const pageContent = page.description || config.description;
