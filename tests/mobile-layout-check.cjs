@@ -137,6 +137,52 @@ async function assertNoHorizontalOverflow(page, label) {
   return state;
 }
 
+async function assertApiModalUsesPageScroll(page) {
+  const state = await page.evaluate(() => {
+    const body = document.querySelector('[data-api-config-body]');
+    const lists = [...document.querySelectorAll('[data-api-list]')].map((el) => {
+      const style = window.getComputedStyle(el);
+      return {
+        role: el.getAttribute('data-api-list'),
+        overflowY: style.overflowY,
+        clientHeight: Math.round(el.clientHeight),
+        scrollHeight: Math.round(el.scrollHeight),
+      };
+    });
+    const guide = document.querySelector('[data-api-guide]');
+    const guideStyle = guide ? window.getComputedStyle(guide) : null;
+    const bodyStyle = body ? window.getComputedStyle(body) : null;
+
+    return {
+      body: body ? {
+        overflowY: bodyStyle?.overflowY,
+        clientHeight: Math.round(body.clientHeight),
+        scrollHeight: Math.round(body.scrollHeight),
+      } : null,
+      guide: guide ? {
+        overflowY: guideStyle?.overflowY,
+        clientHeight: Math.round(guide.clientHeight),
+        scrollHeight: Math.round(guide.scrollHeight),
+      } : null,
+      lists,
+    };
+  });
+
+  assert(state.body, 'mobile API modal: scroll body was not found', state);
+  assert(state.body.overflowY === 'auto', 'mobile API modal: body should own vertical scrolling', state);
+  assert(state.lists.length === 2, 'mobile API modal: API lists were not found', state);
+  assert(
+    state.lists.every((item) => item.overflowY === 'visible' && item.scrollHeight <= item.clientHeight + 1),
+    'mobile API modal: API config lists should expand instead of becoming nested scrollers',
+    state,
+  );
+  assert(
+    !state.guide || state.guide.overflowY === 'visible',
+    'mobile API modal: guide panel should expand instead of becoming a nested scroller',
+    state,
+  );
+}
+
 async function runChecks(url) {
   const browser = await launchChromium();
 
@@ -153,6 +199,7 @@ async function runChecks(url) {
 
       await page.getByLabel(/API|Open API|打开 API/).click();
       await assertNoHorizontalOverflow(page, 'mobile API modal');
+      await assertApiModalUsesPageScroll(page);
       await context.close();
     }
 

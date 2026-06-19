@@ -10,6 +10,7 @@ import {
   callGeminiImageAPI, callOpenAIImageAPI, callOpenAIChatImageAPI,
 } from '../services/aiService';
 import recommendedProxies from '../data/recommended-proxies.json';
+import { createId } from '../utils/id';
 
 interface Props {
   onConfigured?: () => void;
@@ -86,7 +87,7 @@ const officialApiGuides = [
 ];
 
 const defaultAPIConfig = (provider: AIProvider = 'gemini'): APIConfig => ({
-  id: crypto.randomUUID(),
+  id: createId('api'),
   name: '',
   provider,
   baseUrl: provider === 'gemini' ? '' : 'https://api.openai.com/v1/chat/completions',
@@ -708,13 +709,13 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
         </div>
 
         {/* Body */}
-        <div className="flex-1 min-h-0 overflow-y-auto sm:overflow-hidden px-4 py-4 sm:px-6 sm:py-5">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 min-h-0 lg:h-full">
+        <div data-api-config-body className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden px-4 py-4 sm:px-6 sm:py-5">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6 lg:min-h-0 lg:h-full">
             {/* Left: API Config */}
-            <div className="lg:col-span-2 flex flex-col h-full min-h-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 flex-1 min-h-0">
+            <div className="lg:col-span-2 flex flex-col lg:h-full lg:min-h-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6 lg:flex-1 lg:min-h-0">
                 {/* Text APIs */}
-                <div className="flex flex-col min-h-0">
+                <div className="flex flex-col lg:min-h-0">
                   <div className="flex items-center justify-between shrink-0 mb-3">
                     <h3 className="text-sm font-bold text-stone-700 dark:text-stone-200">{isZh ? '文本思考 API' : 'Text Thinking APIs'}</h3>
                     <button
@@ -724,7 +725,7 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
                       + {isZh ? '添加' : 'Add'}
                     </button>
                   </div>
-                  <div className="space-y-3 overflow-y-auto pr-1 custom-scrollbar">
+                  <div data-api-list="text" className="space-y-3 lg:overflow-y-auto lg:pr-1 custom-scrollbar">
                     {textAPIs.map((api, i) => renderAPICard(api, 'text', i))}
                   </div>
                   {textAPIs.length === 0 && (
@@ -740,7 +741,7 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
                 </div>
 
                 {/* Image APIs */}
-                <div className="flex flex-col min-h-0">
+                <div className="flex flex-col lg:min-h-0">
                   <div className="flex items-center justify-between shrink-0 mb-3">
                     <h3 className="text-sm font-bold text-stone-700 dark:text-stone-200">{isZh ? '图片生成 API' : 'Image Generation APIs'}</h3>
                     <button
@@ -750,7 +751,7 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
                       + {isZh ? '添加' : 'Add'}
                     </button>
                   </div>
-                  <div className="space-y-3 overflow-y-auto pr-1 custom-scrollbar">
+                  <div data-api-list="image" className="space-y-3 lg:overflow-y-auto lg:pr-1 custom-scrollbar">
                     {imageAPIs.map((api, i) => renderAPICard(api, 'image', i))}
                   </div>
                   {imageAPIs.length === 0 && (
@@ -768,8 +769,8 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
             </div>
 
             {/* Right: Official API guide + fallback proxies */}
-            <div className="lg:col-span-1 flex flex-col h-full min-h-0 overflow-hidden">
-              <div className="flex-1 min-h-0 overflow-y-auto pr-1 pb-3 custom-scrollbar space-y-4">
+            <div className="lg:col-span-1 flex flex-col lg:h-full lg:min-h-0 lg:overflow-hidden">
+              <div data-api-guide className="space-y-4 pb-3 lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1 custom-scrollbar">
                 <div>
                   <h3 className="text-sm font-bold text-stone-700 dark:text-stone-200 mb-2">
                     {isZh ? '推荐官方方式' : 'Official API First'}

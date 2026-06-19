@@ -1,5 +1,6 @@
 import { GeneratedImage } from '../types';
 import { getDB } from './db';
+import { createId } from '../utils/id';
 
 export interface HistoryPaginatedResponse {
   items: GeneratedImage[];
@@ -12,7 +13,7 @@ export interface HistoryPaginatedResponse {
 export const saveImageToHistory = async (image: GeneratedImage): Promise<void> => {
   const db = await getDB();
   await db.put('generatedAssets', {
-    id: image.id || crypto.randomUUID(),
+    id: image.id || createId('history'),
     projectId: image.details?.projectId || null,
     artboardId: null,
     imageData: image.url,

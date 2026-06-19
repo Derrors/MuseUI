@@ -1,4 +1,5 @@
 import { APISettings, APIConfig, RequestLogEntry } from '../types';
+import { createId } from '../utils/id';
 
 const API_SETTINGS_KEY = 'muse-ui-api-settings';
 const REQUEST_LOGS_KEY = 'muse-ui-request-logs';
@@ -45,7 +46,7 @@ const migrateFromLegacy = (): APISettings | null => {
   const imageModel = localStorage.getItem(LEGACY_IMAGE_MODEL) || DEFAULT_IMAGE_MODEL;
 
   const shared: APIConfig = {
-    id: crypto.randomUUID(),
+    id: createId('api'),
     name: 'Legacy Config',
     provider: 'gemini',
     baseUrl,

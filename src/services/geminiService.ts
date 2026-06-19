@@ -2,6 +2,7 @@ import { GenerationConfig, PageRequest, UIStyle, DesignSystem } from "../types";
 import { BUILDER_TOOLS, MEDIA_TYPES } from "../constants";
 import { callTextAPI, callImageAPI } from './aiService';
 import { Type } from "@google/genai";
+import { createId } from '../utils/id';
 
 const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -342,7 +343,7 @@ export const generateUIReference = async (params: GenerateUIParams): Promise<any
         }
     });
 
-    const id = crypto.randomUUID();
+    const id = createId('image');
     return {
         id, url, base64: url,
         prompt: params.prompt, timestamp: Date.now(),

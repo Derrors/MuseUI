@@ -1,5 +1,6 @@
 import { Artboard, GeneratedImage, StudioType } from '../types';
 import { getDB } from './db';
+import { createId } from '../utils/id';
 
 export interface Project {
   id: string;
@@ -36,7 +37,7 @@ export const createProject = async (data: { name: string; studioType?: StudioTyp
   const db = await getDB();
   const now = new Date().toISOString();
   const project: Project = {
-    id: crypto.randomUUID(),
+    id: createId('project'),
     name: data.name,
     studioType: data.studioType || 'ui-designer',
     description: data.description || null,

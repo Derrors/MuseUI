@@ -1,5 +1,6 @@
 import { LayoutElement } from '../types';
 import { getDB } from './db';
+import { createId } from '../utils/id';
 
 export interface LayoutPreset {
   id: string;
@@ -15,7 +16,7 @@ export const getPresets = async (): Promise<LayoutPreset[]> => {
 
 export const savePreset = async (preset: LayoutPreset): Promise<string> => {
   const db = await getDB();
-  const id = preset.id || crypto.randomUUID();
+  const id = preset.id || createId('preset');
   await db.put('layoutPresets', { ...preset, id });
   return id;
 };

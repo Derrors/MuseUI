@@ -1,13 +1,14 @@
 import { GoogleGenAI } from '@google/genai';
 import { APIConfig, AIProvider, RequestLogEntry } from '../types';
 import { getAPISettings, addRequestLog } from './apiKeyStore';
+import { createId } from '../utils/id';
 
 // ─── Helpers ───
 
 const now = () => Date.now();
 
 const logRequest = (entry: Omit<RequestLogEntry, 'id' | 'timestamp'>) => {
-    addRequestLog({ id: crypto.randomUUID(), timestamp: now(), ...entry });
+    addRequestLog({ id: createId('request'), timestamp: now(), ...entry });
 };
 
 const base64ToPart = (base64String: string) => {
