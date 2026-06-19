@@ -128,11 +128,11 @@ const RegenModal: React.FC<Props> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-stone-900 rounded-xl p-6 max-w-4xl w-full flex gap-6 max-h-[90vh] overflow-hidden animate-in zoom-in-95">
+    <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-0 sm:p-4">
+        <div className="bg-white dark:bg-stone-900 rounded-none sm:rounded-xl p-4 sm:p-6 max-w-4xl w-full h-[100dvh] sm:h-auto flex flex-col md:flex-row gap-4 sm:gap-6 max-h-[100dvh] sm:max-h-[90vh] overflow-y-auto md:overflow-hidden animate-in zoom-in-95">
             
             {/* Left Column: Image & Masking */}
-            <div className="flex-1 flex flex-col min-h-0 bg-stone-100 dark:bg-stone-950 rounded-lg p-4 border border-stone-200 dark:border-stone-800">
+            <div className="flex-1 flex flex-col min-h-[42vh] md:min-h-0 bg-stone-100 dark:bg-stone-950 rounded-lg p-4 border border-stone-200 dark:border-stone-800">
                 <div className="flex justify-between items-center mb-2">
                     <h4 className="text-xs font-bold text-stone-500 uppercase tracking-widest">
                         {lang === 'zh' ? '圈选重绘区域 (可选)' : 'Circle area to regenerate (Optional)'}
@@ -173,7 +173,7 @@ const RegenModal: React.FC<Props> = ({
             </div>
 
             {/* Right Column: Controls */}
-            <div className="w-80 flex flex-col gap-4 overflow-y-auto pr-1">
+            <div className="w-full md:w-80 flex flex-col gap-4 overflow-y-visible md:overflow-y-auto md:pr-1">
                 <h3 className="font-bold text-lg text-stone-800 dark:text-white">{lang === 'zh' ? '重新生成 / 微调' : 'Regenerate / Refine'}</h3>
                 
                 {/* Mode Select */}

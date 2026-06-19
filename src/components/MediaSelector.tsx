@@ -30,12 +30,12 @@ const MediaSelector: React.FC<Props> = ({
         <label className="block text-sm font-medium text-stone-600 dark:text-stone-400 mb-2">
           {isZh ? '画面比例' : 'Aspect Ratio'}
         </label>
-        <div className="grid grid-cols-4 gap-1.5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
           {MEDIA_ASPECT_RATIOS.map(r => (
             <button
               key={r.id}
               onClick={() => onAspectRatioChange(r.id)}
-              className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all ${
+              className={`min-h-14 flex flex-col items-center justify-center p-2 rounded-lg border transition-all ${
                 aspectRatio === r.id
                   ? 'bg-teal-50 dark:bg-teal-500/10 border-teal-500 text-teal-600 dark:text-teal-300'
                   : 'bg-white dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-stone-500 dark:text-stone-400 hover:border-stone-400 dark:hover:border-stone-600'
@@ -92,7 +92,7 @@ const MediaSelector: React.FC<Props> = ({
           </div>
         </div>
         {customSize.active && (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-stone-500 mb-1">{isZh ? '宽' : 'W'} (px)</label>
               <input type="number" value={customSize.width}

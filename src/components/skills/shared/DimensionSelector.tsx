@@ -32,7 +32,7 @@ export const DimensionSelector: React.FC<Props> = ({
       <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide">
         {lang === 'zh' ? label_zh : label}
       </label>
-      <div className={`grid gap-1.5 ${columns === 3 ? 'grid-cols-3' : columns === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+      <div className={`grid gap-1.5 ${columns === 3 ? 'grid-cols-1 sm:grid-cols-3' : columns === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
         {options.map(opt => (
           <div
             key={opt.id}

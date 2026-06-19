@@ -18,7 +18,7 @@ export const OptionCard: React.FC<Props> = ({
   return (
     <button
       onClick={onClick}
-      className={`relative w-full text-left p-2.5 rounded-lg border transition-all duration-200 ${
+      className={`relative w-full min-h-11 text-left p-2.5 rounded-lg border transition-all duration-200 ${
         isSelected
           ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20 shadow-sm'
           : 'border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 hover:border-stone-300 dark:hover:border-stone-600'

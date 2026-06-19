@@ -1,5 +1,5 @@
 
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import IconLoader from './IconLoader';
 import { I18N } from '../constants';
 import { LangType } from '../types';
@@ -13,8 +13,6 @@ interface Props {
 const LogoUploader: React.FC<Props> = ({ logoUrl, onChange, lang }) => {
     const t = I18N[lang];
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [isHovering, setIsHovering] = useState(false);
-
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -41,10 +39,8 @@ const LogoUploader: React.FC<Props> = ({ logoUrl, onChange, lang }) => {
             
             <div 
                 onClick={() => fileInputRef.current?.click()}
-                onMouseEnter={() => setIsHovering(true)}
-                onMouseLeave={() => setIsHovering(false)}
                 className={`
-                    relative w-24 h-24 rounded-xl border-2 border-dashed 
+                    group relative w-24 h-24 rounded-xl border-2 border-dashed 
                     flex items-center justify-center cursor-pointer transition-all overflow-hidden
                     ${logoUrl 
                         ? 'border-teal-200 dark:border-teal-800 bg-white dark:bg-black' 
@@ -55,17 +51,15 @@ const LogoUploader: React.FC<Props> = ({ logoUrl, onChange, lang }) => {
                 {logoUrl ? (
                     <>
                         <img src={logoUrl} alt="Brand Logo" className="w-full h-full object-contain p-2" />
-                        {isHovering && (
-                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center animate-in fade-in duration-200">
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity animate-in fade-in duration-200">
                                 <button 
                                     onClick={handleRemove}
-                                    className="p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                                    className="min-h-10 min-w-10 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors flex items-center justify-center"
                                     title={lang === 'zh' ? '移除' : 'Remove'}
                                 >
                                     <IconLoader name="trash" size={16} />
                                 </button>
-                            </div>
-                        )}
+                        </div>
                     </>
                 ) : (
                     <div className="flex flex-col items-center gap-1 text-stone-400">

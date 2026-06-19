@@ -342,19 +342,19 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
         <div className="fixed inset-0 z-50 bg-stone-100/95 dark:bg-stone-950/95 backdrop-blur-md flex flex-col animate-in fade-in duration-300">
 
             {/* Top Bar: Filters & Controls */}
-            <div className="px-6 py-4 flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-stone-950 border-b border-stone-200 dark:border-stone-800 shadow-sm">
-                <div className="flex items-center gap-4">
+            <div className="px-3 py-3 sm:px-6 sm:py-4 flex flex-col lg:flex-row lg:flex-wrap lg:items-center justify-between gap-3 sm:gap-4 bg-white dark:bg-stone-950 border-b border-stone-200 dark:border-stone-800 shadow-sm">
+                <div className="flex w-full lg:w-auto flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
                     <h2 className="text-xl font-bold text-stone-800 dark:text-white flex items-center gap-2">
                         <span>🖼️</span> {t.gallery} <span className="text-sm font-normal text-stone-500">({filteredImages.length})</span>
                     </h2>
-                    <div className="h-6 w-px bg-stone-300 dark:bg-stone-700 mx-2"></div>
+                    <div className="hidden lg:block h-6 w-px bg-stone-300 dark:bg-stone-700 mx-2"></div>
 
                     {/* Filters */}
-                    <div className="flex gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex gap-2">
                         <select
                             value={filterPlatform}
                             onChange={(e) => setFilterPlatform(e.target.value)}
-                            className="text-sm px-3 py-1.5 bg-stone-50 dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded-lg focus:ring-teal-500 text-stone-700 dark:text-stone-300"
+                            className="text-sm px-3 py-2 sm:py-1.5 bg-stone-50 dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded-lg focus:ring-teal-500 text-stone-700 dark:text-stone-300"
                         >
                             <option value="all">{t.platform}: {t.all}</option>
                             {platforms.map(p => <option key={p} value={p}>{p}</option>)}
@@ -362,7 +362,7 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
                         <select
                             value={filterProjectId}
                             onChange={(e) => setFilterProjectId(e.target.value)}
-                            className="text-sm px-3 py-1.5 bg-stone-50 dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded-lg focus:ring-teal-500 text-stone-700 dark:text-stone-300 max-w-[150px]"
+                            className="text-sm px-3 py-2 sm:py-1.5 bg-stone-50 dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded-lg focus:ring-teal-500 text-stone-700 dark:text-stone-300 lg:max-w-[150px]"
                         >
                             <option value="all">{lang === 'zh' ? '所有项目' : 'All Projects'}</option>
                             <option value="unassigned">{lang === 'zh' ? '未分配' : 'Unassigned'}</option>
@@ -371,7 +371,7 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
                         <select
                             value={filterStyle}
                             onChange={(e) => setFilterStyle(e.target.value)}
-                            className="text-sm px-3 py-1.5 bg-stone-50 dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded-lg focus:ring-teal-500 text-stone-700 dark:text-stone-300"
+                            className="text-sm px-3 py-2 sm:py-1.5 bg-stone-50 dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded-lg focus:ring-teal-500 text-stone-700 dark:text-stone-300"
                         >
                             <option value="all">{t.designStyle}: {t.all}</option>
                             {styles.map(s => <option key={s} value={s}>{s}</option>)}
@@ -381,12 +381,12 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
                             placeholder={t.searchPrompt}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="text-sm px-3 py-1.5 bg-stone-50 dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500 text-stone-700 dark:text-stone-300 w-48"
+                            className="text-sm px-3 py-2 sm:py-1.5 bg-stone-50 dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500 text-stone-700 dark:text-stone-300 w-full lg:w-48"
                         />
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex w-full lg:w-auto items-center justify-between lg:justify-end gap-3">
                     <button
                         onClick={() => fileInputRef.current?.click()}
                         className="text-sm px-4 py-2 bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300 rounded-lg hover:bg-teal-200 dark:hover:bg-teal-900/50 transition-colors"
@@ -435,7 +435,7 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
                         <p className="mt-4 text-stone-500">{lang === 'zh' ? '加载中...' : 'Loading...'}</p>
                     </div>
                 ) : displayImages.length > 0 ? (
-                    <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-6 space-y-6">
+                    <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4 sm:gap-6 space-y-4 sm:space-y-6">
                         {displayImages.map(({ item: img, isStack, count, batchId, isExpandedBlock, batchItems }) => (
                             <div
                                 key={img.id}
@@ -621,7 +621,7 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
             {/* Lightbox / Zoom View */}
             {zoomedImage && (
                 <div
-                    className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center p-8 animate-in fade-in duration-200"
+                    className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center p-3 sm:p-8 animate-in fade-in duration-200"
                     onClick={() => setZoomedImage(null)}
                 >
                     <button
@@ -634,7 +634,7 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
                     </button>
 
                     <div
-                        className="max-w-7xl max-h-full flex flex-col md:flex-row gap-8 bg-stone-900 rounded-2xl overflow-hidden border border-stone-800 shadow-2xl"
+                        className="max-w-7xl max-h-full flex flex-col md:flex-row gap-4 sm:gap-8 bg-stone-900 rounded-xl sm:rounded-2xl overflow-hidden border border-stone-800 shadow-2xl"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Image Area */}

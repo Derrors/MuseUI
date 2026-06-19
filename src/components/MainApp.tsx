@@ -1,11 +1,12 @@
 
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import AppHeader from './AppHeader';
 import AppSidebar from './AppSidebar';
 import LayoutBuilder from './LayoutBuilder';
 import GalleryManager from './GalleryManager';
 import CanvasBoard from './CanvasBoard';
+import MobileBottomNav, { MobilePane } from './MobileBottomNav';
 import RegenModal from './modals/RegenModal';
 import SpecReviewModal from './modals/SpecReviewModal';
 import BatchConfirmationModal from './modals/BatchConfirmationModal';
@@ -27,6 +28,8 @@ const MainApp: React.FC<Props> = ({ projectId }) => {
     const { state, actions } = useAppLogic(projectId);
     const [isChangelogOpen, setIsChangelogOpen] = useState(false);
     const [showFirstUseTips, setShowFirstUseTips] = useState(false);
+    const [activeMobilePane, setActiveMobilePane] = useState<MobilePane>('config');
+    const previousArtboardCount = useRef(state.artboards.length);
 
     useEffect(() => {
         if (localStorage.getItem(FIRST_USE_TIPS_KEY) !== 'true') {
@@ -38,6 +41,13 @@ const MainApp: React.FC<Props> = ({ projectId }) => {
         localStorage.setItem(FIRST_USE_TIPS_KEY, 'true');
         setShowFirstUseTips(false);
     };
+
+    useEffect(() => {
+        if (state.artboards.length > previousArtboardCount.current) {
+            setActiveMobilePane('canvas');
+        }
+        previousArtboardCount.current = state.artboards.length;
+    }, [state.artboards.length]);
 
     // --- Global Keyboard Shortcuts ---
     useEffect(() => {
@@ -104,7 +114,7 @@ const MainApp: React.FC<Props> = ({ projectId }) => {
     };
 
     return (
-        <div className={`w-full h-screen flex flex-col overflow-hidden ${state.theme}`}>
+        <div className={`w-full h-[100dvh] flex flex-col overflow-hidden ${state.theme}`}>
             <AppHeader
                 lang={state.lang}
                 setLang={actions.setLang}
@@ -123,8 +133,9 @@ const MainApp: React.FC<Props> = ({ projectId }) => {
                 onOpenProjectManager={() => actions.setIsProjectManagerOpen(true)}
             />
 
-            <div className="flex-1 flex overflow-hidden">
-                <AppSidebar
+            <div className="flex-1 flex overflow-hidden min-h-0 pb-16 md:pb-0">
+                <div className={`${activeMobilePane === 'config' ? 'flex' : 'hidden'} md:flex w-full md:w-auto min-w-0`}>
+                    <AppSidebar
                     // Role
                     activeRole={state.activeRole}
                     setActiveRole={actions.setActiveRole}
@@ -185,10 +196,11 @@ const MainApp: React.FC<Props> = ({ projectId }) => {
                     onOpenProjectManager={() => actions.setIsProjectManagerOpen(true)}
                     onAiGenerateDescription={actions.handleAiGenerateDescription}
                     isAiGeneratingDescription={state.isAiGeneratingDescription}
-                />
+                    />
+                </div>
 
                 {/* Main Canvas Area */}
-                <div id="main-canvas-area" className="flex-1 bg-stone-50 dark:bg-stone-950 relative flex flex-col min-w-0">
+                <div id="main-canvas-area" className={`${activeMobilePane === 'canvas' ? 'flex' : 'hidden'} md:flex flex-1 w-full bg-stone-50 dark:bg-stone-950 relative flex-col min-w-0`}>
                     <CanvasBoard
                         artboards={state.artboards} groups={state.artboardGroups}
                         onSelectArtboard={(id) => actions.handleOpenRegen(id)}
@@ -212,6 +224,13 @@ const MainApp: React.FC<Props> = ({ projectId }) => {
                     />
                 </div>
             </div>
+
+            <MobileBottomNav
+                activePane={activeMobilePane}
+                onChange={setActiveMobilePane}
+                lang={state.lang}
+                hasArtboards={state.artboards.length > 0}
+            />
 
             {/* OVERLAYS */}
             <ToastContainer notifications={state.notifications} onClose={actions.removeNotification} />

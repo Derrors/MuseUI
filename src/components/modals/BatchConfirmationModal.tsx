@@ -12,8 +12,8 @@ const BatchConfirmationModal: React.FC<Props> = ({ batchConfirmation, setBatchCo
   if (!batchConfirmation) return null;
 
   return (
-    <div className="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-stone-900 rounded-xl p-6 max-w-lg w-full flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center p-0 sm:p-4">
+        <div className="bg-white dark:bg-stone-900 rounded-none sm:rounded-xl p-4 sm:p-6 max-w-lg w-full h-[100dvh] sm:h-auto flex flex-col max-h-[100dvh] sm:max-h-[90vh]">
             <h3 className="font-bold text-lg mb-2 text-stone-800 dark:text-white">
                 {lang === 'zh' ? `批量生成确认 (${batchConfirmation.index}/${batchConfirmation.total})` : `Batch Generation (${batchConfirmation.index}/${batchConfirmation.total})`}
             </h3>
@@ -30,16 +30,16 @@ const BatchConfirmationModal: React.FC<Props> = ({ batchConfirmation, setBatchCo
                 />
             </div>
 
-            <div className="flex gap-2 justify-end pt-2">
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-2">
                 <button 
                     onClick={() => batchConfirmation.resolve(null)}
-                    className="px-4 py-2 text-red-500 hover:bg-red-50 rounded text-sm font-medium"
+                    className="min-h-11 px-4 py-2 text-red-500 hover:bg-red-50 rounded text-sm font-medium"
                 >
                     {lang === 'zh' ? '停止批量' : 'Stop Batch'}
                 </button>
                 <button 
                     onClick={() => batchConfirmation.resolve(batchConfirmation.prompt)}
-                    className="px-6 py-2 bg-teal-600 text-white rounded text-sm font-bold hover:bg-teal-500 shadow-lg shadow-teal-500/20"
+                    className="min-h-11 px-6 py-2 bg-teal-600 text-white rounded text-sm font-bold hover:bg-teal-500 shadow-lg shadow-teal-500/20"
                 >
                     {lang === 'zh' ? '生成' : 'Generate'}
                 </button>

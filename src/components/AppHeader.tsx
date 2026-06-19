@@ -30,6 +30,7 @@ const AppHeader: React.FC<Props> = ({
   const t = I18N[lang];
   const importInputRef = useRef<HTMLInputElement>(null);
   const [showApiSettings, setShowApiSettings] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState('');
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -51,11 +52,11 @@ const AppHeader: React.FC<Props> = ({
 
   return (
     <>
-      <header className="h-14 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 flex items-center justify-between px-4 z-20 shrink-0">
+      <header className="relative h-14 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 flex items-center justify-between px-3 md:px-4 z-20 shrink-0">
         <div className="flex items-center gap-3 min-w-0">
           <a href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
             <img src="/logo.png" alt="MuseUI" className="w-8 h-8 rounded-lg object-cover" />
-            <h1 className="font-bold text-stone-800 dark:text-stone-100 text-lg">MuseUI</h1>
+            <h1 className="hidden sm:block font-bold text-stone-800 dark:text-stone-100 text-lg">MuseUI</h1>
           </a>
           <a
             href="https://world.guantou.site/"
@@ -87,7 +88,94 @@ const AppHeader: React.FC<Props> = ({
           </a>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex md:hidden items-center gap-1.5 shrink-0">
+          {currentProject && (
+            <div className="flex h-10 items-center gap-1.5 rounded-lg border border-teal-200 bg-teal-50 px-2 text-teal-700 dark:border-teal-800 dark:bg-teal-900/20 dark:text-teal-300">
+              {isEditingName ? (
+                <input
+                  ref={nameInputRef}
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  onBlur={commitRename}
+                  onKeyDown={(e) => { if (e.key === 'Enter') commitRename(); if (e.key === 'Escape') setIsEditingName(false); }}
+                  className="w-20 bg-transparent text-xs font-bold outline-none"
+                />
+              ) : (
+                <button
+                  onClick={startRename}
+                  className="max-w-[92px] truncate text-xs font-bold"
+                  title={lang === 'zh' ? '点击改名' : 'Click to rename'}
+                >
+                  {currentProject.name}
+                </button>
+              )}
+              <button
+                onClick={() => { if (!isSaving) onUpdateCurrentProject(); }}
+                disabled={isSaving}
+                className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-teal-100 disabled:opacity-50 dark:hover:bg-teal-900/40"
+                title={lang === 'zh' ? (isSaving ? '保存中...' : '保存当前变动到此项目') : (isSaving ? 'Saving...' : 'Save changes to this project')}
+              >
+                {isSaving ? (
+                  <svg className="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  <IconLoader name="save" size={15} />
+                )}
+              </button>
+            </div>
+          )}
+          <button
+            onClick={() => setShowApiSettings(true)}
+            className={`relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
+              hasKey
+                ? 'bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700'
+                : 'border border-amber-300 bg-amber-100 text-amber-700 hover:bg-amber-200 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50'
+            }`}
+            aria-label={lang === 'zh' ? '打开 API 设置' : 'Open API settings'}
+            title={lang === 'zh' ? 'API 设置' : 'API settings'}
+          >
+            <IconLoader name="settings" size={18} />
+            {!hasKey && <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-amber-500" />}
+          </button>
+          <button
+            onClick={() => setIsMobileMenuOpen(v => !v)}
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
+            aria-label={lang === 'zh' ? '打开更多操作' : 'Open more actions'}
+            title={lang === 'zh' ? '更多' : 'More'}
+          >
+            <IconLoader name="menu" size={20} />
+          </button>
+
+          {isMobileMenuOpen && (
+            <div className="absolute right-3 top-full mt-2 w-60 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-2xl dark:border-stone-700 dark:bg-stone-900">
+              <button onClick={() => { onOpenGallery(); setIsMobileMenuOpen(false); }} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-stone-700 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-800">
+                <IconLoader name="image" size={16} /> {t.gallery}
+              </button>
+              <button onClick={() => { toggleTheme(); setIsMobileMenuOpen(false); }} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-stone-700 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-800">
+                <IconLoader name={theme === 'dark' ? 'sun' : 'moon'} size={16} /> {theme === 'dark' ? (lang === 'zh' ? '浅色模式' : 'Light mode') : (lang === 'zh' ? '深色模式' : 'Dark mode')}
+              </button>
+              <button onClick={() => { setLang(lang === 'zh' ? 'en' : 'zh'); setIsMobileMenuOpen(false); }} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-stone-700 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-800">
+                <IconLoader name="globe" size={16} /> {lang === 'zh' ? 'English' : '中文'}
+              </button>
+              <button onClick={() => { toggleDevMode(); setIsMobileMenuOpen(false); }} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-stone-700 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-800">
+                <IconLoader name="code" size={16} /> {devMode ? (lang === 'zh' ? '关闭 DEV' : 'Disable DEV') : (lang === 'zh' ? '开启 DEV' : 'Enable DEV')}
+              </button>
+              <button onClick={() => { onExportConfig(); setIsMobileMenuOpen(false); }} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-stone-700 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-800">
+                <IconLoader name="download" size={16} /> {lang === 'zh' ? '导出配置' : 'Export config'}
+              </button>
+              <button onClick={() => importInputRef.current?.click()} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-stone-700 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-800">
+                <IconLoader name="upload" size={16} /> {lang === 'zh' ? '导入配置' : 'Import config'}
+              </button>
+              <a href="https://github.com/Derrors/MuseUI" target="_blank" rel="noreferrer" className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-stone-700 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-800" onClick={() => setIsMobileMenuOpen(false)}>
+                <IconLoader name="code" size={16} /> GitHub
+              </a>
+            </div>
+          )}
+        </div>
+
+        <div className="hidden md:flex items-center gap-2 shrink-0">
           {currentProject && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 rounded-lg border border-teal-200 dark:border-teal-800 mr-2">
               {isEditingName ? (
@@ -189,6 +277,18 @@ const AppHeader: React.FC<Props> = ({
           </a>
         </div>
       </header>
+
+      <input
+        ref={importInputRef}
+        type="file"
+        accept="application/json,.json"
+        hidden
+        onChange={(e) => {
+          onImportConfig(e);
+          e.currentTarget.value = '';
+          setIsMobileMenuOpen(false);
+        }}
+      />
 
       {/* API Settings Modal */}
       {showApiSettings && (

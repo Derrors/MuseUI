@@ -89,7 +89,7 @@ const ReferenceUploader: React.FC<Props> = ({
               <button 
                 onClick={() => onExtractStyle(images)}
                 disabled={isExtracting}
-                className="text-[10px] px-2 py-1 bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-300 rounded hover:bg-teal-200 dark:hover:bg-teal-800 transition-colors flex items-center gap-1"
+                className="min-h-9 text-[10px] px-2 py-1 bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-300 rounded hover:bg-teal-200 dark:hover:bg-teal-800 transition-colors flex items-center gap-1"
               >
                   {isExtracting ? (
                       <span className="animate-spin">⏳</span>
@@ -102,7 +102,7 @@ const ReferenceUploader: React.FC<Props> = ({
       </div>
       
       <div 
-        className={`grid grid-cols-4 gap-2 mb-3 transition-colors rounded-xl p-1 ${isDragging ? 'bg-stone-200 dark:bg-stone-800 ring-2 ring-teal-500/50' : ''}`}
+        className={`grid grid-cols-3 sm:grid-cols-4 gap-2 mb-3 transition-colors rounded-xl p-1 ${isDragging ? 'bg-stone-200 dark:bg-stone-800 ring-2 ring-teal-500/50' : ''}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -114,10 +114,10 @@ const ReferenceUploader: React.FC<Props> = ({
               alt="preview" 
               className="w-full h-full object-cover" 
             />
-            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/50 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center justify-center">
                <button 
                 onClick={() => removeImage(idx)}
-                className="text-white bg-red-500/80 p-1 rounded-full hover:bg-red-600"
+                className="min-h-9 min-w-9 text-white bg-red-500/80 p-1 rounded-full hover:bg-red-600 flex items-center justify-center"
                >
                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />

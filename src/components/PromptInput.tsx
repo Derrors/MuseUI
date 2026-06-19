@@ -158,7 +158,7 @@ const PromptInput: React.FC<Props> = ({
         <div className="flex bg-stone-100 dark:bg-stone-800 p-1 rounded-lg border border-stone-200 dark:border-stone-700">
           <button
             onClick={() => onBatchModeChange(false)}
-            className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${!isBatchMode
+            className={`flex-1 min-h-9 py-1.5 text-xs font-bold rounded-md transition-all ${!isBatchMode
               ? 'bg-white dark:bg-stone-600 text-teal-600 dark:text-teal-300 shadow-sm'
               : 'text-stone-500 hover:text-stone-700 dark:hover:text-stone-300'
               }`}
@@ -167,7 +167,7 @@ const PromptInput: React.FC<Props> = ({
           </button>
           <button
             onClick={() => onBatchModeChange(true)}
-            className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${isBatchMode
+            className={`flex-1 min-h-9 py-1.5 text-xs font-bold rounded-md transition-all ${isBatchMode
               ? 'bg-white dark:bg-stone-600 text-teal-600 dark:text-teal-300 shadow-sm'
               : 'text-stone-500 hover:text-stone-700 dark:hover:text-stone-300'
               }`}

@@ -40,8 +40,8 @@ const DevReviewModal: React.FC<Props> = ({ reviewData, onClose }) => {
   const { apiRequestInfo } = reviewData;
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-stone-900 rounded-xl p-6 max-w-3xl w-full max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-0 sm:p-4">
+        <div className="bg-white dark:bg-stone-900 rounded-none sm:rounded-xl p-4 sm:p-6 max-w-3xl w-full h-[100dvh] sm:h-auto max-h-[100dvh] sm:max-h-[90vh] flex flex-col">
             <h3 className="text-lg font-bold mb-4 text-stone-800 dark:text-white">
                 {reviewData.layoutAnalysis ? 'Layout Confirmation' : 'Review Generation Request'}
             </h3>
@@ -67,7 +67,7 @@ const DevReviewModal: React.FC<Props> = ({ reviewData, onClose }) => {
                             API Request Preview
                         </label>
                         <div className="space-y-2">
-                            <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                                 <div className="bg-white dark:bg-stone-800 p-2 rounded border border-amber-200 dark:border-amber-800">
                                     <span className="text-stone-500 dark:text-stone-400 block text-[10px] uppercase">Provider</span>
                                     <span className="font-mono text-stone-700 dark:text-stone-300">{apiRequestInfo.targetAPI.provider}</span>
@@ -76,7 +76,7 @@ const DevReviewModal: React.FC<Props> = ({ reviewData, onClose }) => {
                                     <span className="text-stone-500 dark:text-stone-400 block text-[10px] uppercase">Model</span>
                                     <span className="font-mono text-stone-700 dark:text-stone-300">{apiRequestInfo.targetAPI.model}</span>
                                 </div>
-                                <div className="bg-white dark:bg-stone-800 p-2 rounded border border-amber-200 dark:border-amber-800 col-span-2">
+                                <div className="bg-white dark:bg-stone-800 p-2 rounded border border-amber-200 dark:border-amber-800 sm:col-span-2">
                                     <span className="text-stone-500 dark:text-stone-400 block text-[10px] uppercase">Base URL</span>
                                     <span className="font-mono text-stone-700 dark:text-stone-300 text-[11px] break-all">{apiRequestInfo.targetAPI.baseUrl}</span>
                                 </div>
@@ -132,7 +132,7 @@ const DevReviewModal: React.FC<Props> = ({ reviewData, onClose }) => {
                 </div>
 
                 {reviewData.images.length > 0 && (
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         {reviewData.images.map((img, idx) => (
                             <div key={idx} className="text-center group relative">
                                 <img src={img.url} className="h-16 w-full object-contain mx-auto border rounded bg-stone-50 dark:bg-stone-800" />
@@ -142,11 +142,11 @@ const DevReviewModal: React.FC<Props> = ({ reviewData, onClose }) => {
                     </div>
                 )}
             </div>
-            <div className="flex justify-end gap-3 pt-4 border-t border-stone-200 dark:border-stone-800">
-                <button onClick={onClose} className="px-4 py-2 text-stone-500 hover:text-stone-700 dark:hover:text-stone-300 text-sm">Cancel</button>
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 border-t border-stone-200 dark:border-stone-800">
+                <button onClick={onClose} className="min-h-11 px-4 py-2 text-stone-500 hover:text-stone-700 dark:hover:text-stone-300 text-sm">Cancel</button>
                 <button
                     onClick={reviewData.pendingAction}
-                    className="px-6 py-2 bg-gradient-to-r from-teal-600 to-cyan-600 text-white rounded font-bold hover:from-teal-500 hover:to-cyan-500 shadow-lg text-sm"
+                    className="min-h-11 px-6 py-2 bg-gradient-to-r from-teal-600 to-cyan-600 text-white rounded font-bold hover:from-teal-500 hover:to-cyan-500 shadow-lg text-sm"
                 >
                     {reviewData.layoutAnalysis ? 'Confirm & Generate' : 'Generate'}
                 </button>

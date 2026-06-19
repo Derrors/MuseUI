@@ -81,8 +81,8 @@ const ProjectManagerModal: React.FC<Props> = ({
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-white dark:bg-stone-800 rounded-xl shadow-2xl w-[600px] max-h-[85vh] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4">
+            <div className="bg-white dark:bg-stone-800 rounded-none sm:rounded-xl shadow-2xl w-full sm:w-[600px] max-h-[100dvh] sm:max-h-[85vh] flex flex-col overflow-hidden">
                 {/* Header */}
                 <div className="p-4 border-b border-stone-200 dark:border-stone-700 flex justify-between items-center bg-stone-50 dark:bg-stone-900/50">
                     <h2 className="font-bold text-lg text-stone-800 dark:text-stone-100 flex items-center gap-2">
@@ -103,7 +103,7 @@ const ProjectManagerModal: React.FC<Props> = ({
                             <IconLoader name="plus" size={12} />
                             {lang === 'zh' ? '新建项目' : 'Create New Project'}
                         </h3>
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-3 sm:gap-2">
                             <div className="w-16 h-16 bg-stone-200 dark:bg-stone-700 rounded-lg shrink-0 overflow-hidden border border-stone-300 dark:border-stone-600">
                                 {thumbnail ? (
                                     <img src={thumbnail} className="w-full h-full object-cover" />
@@ -125,7 +125,7 @@ const ProjectManagerModal: React.FC<Props> = ({
                             <button
                                 onClick={handleSaveNew}
                                 disabled={!newProjectName.trim()}
-                                className="px-4 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-bold text-sm shadow-lg shadow-teal-500/30 disabled:opacity-50 disabled:shadow-none transition-all flex items-center gap-2"
+                                className="min-h-11 px-4 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-bold text-sm shadow-lg shadow-teal-500/30 disabled:opacity-50 disabled:shadow-none transition-all flex items-center justify-center gap-2"
                             >
                                 <IconLoader name="save" size={16} />
                                 {lang === 'zh' ? '保存' : 'Save'}
@@ -141,7 +141,7 @@ const ProjectManagerModal: React.FC<Props> = ({
                     </div>
 
                     <h3 className="text-xs font-bold text-stone-500 uppercase mb-3 ml-1">{lang === 'zh' ? '已保存项目' : 'Saved Projects'}</h3>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {projects.map(project => {
                             const isCurrent = currentProjectId === project.id;
                             // Adapt field names for DB Project vs Legacy

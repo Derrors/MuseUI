@@ -898,16 +898,16 @@ const LayoutBuilder: React.FC<Props> = ({ device, onSave, onCancel, lang, theme,
 
   return (
     <div
-      className="flex h-full w-full bg-stone-50 dark:bg-stone-900 overflow-hidden"
+      className="flex flex-col md:flex-row h-full w-full bg-stone-50 dark:bg-stone-900 overflow-hidden"
       onKeyDown={handleKeyDown}
       tabIndex={0}
     >
 
       {/* LEFT AREA: Canvas */}
-      <div className="flex-1 relative flex flex-col">
+      <div className="flex-1 min-h-0 relative flex flex-col">
         {/* Top Toolbar */}
-        <div className="h-14 bg-white dark:bg-stone-950 border-b border-stone-200 dark:border-stone-800 flex items-center px-4 justify-between z-20 shadow-sm">
-          <div className="flex items-center space-x-4">
+        <div className="min-h-14 bg-white dark:bg-stone-950 border-b border-stone-200 dark:border-stone-800 flex flex-wrap items-center gap-3 px-3 py-2 sm:px-4 justify-between z-20 shadow-sm">
+          <div className="flex min-w-0 flex-wrap items-center gap-3 sm:space-x-4">
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold text-stone-700 dark:text-stone-300">
                 {lang === 'zh' ? '布局画布' : 'Canvas'}
@@ -1096,7 +1096,7 @@ const LayoutBuilder: React.FC<Props> = ({ device, onSave, onCancel, lang, theme,
       </div>
 
       {/* RIGHT AREA: Tools Sidebar */}
-      <div className="w-80 bg-white dark:bg-stone-950 border-l border-stone-200 dark:border-stone-800 flex flex-col z-10 shadow-lg">
+      <div className="w-full md:w-80 max-h-[44vh] md:max-h-none bg-white dark:bg-stone-950 border-t md:border-t-0 md:border-l border-stone-200 dark:border-stone-800 flex flex-col z-10 shadow-lg">
 
         {/* AI Generator Input */}
         <div className="p-3 border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 space-y-2">

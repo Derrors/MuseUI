@@ -683,11 +683,11 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
   };
 
   return (
-    <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700 w-[80%] shadow-2xl flex flex-col h-[90vh] max-h-[90vh]" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-0 sm:p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-stone-800 rounded-none sm:rounded-2xl border border-stone-200 dark:border-stone-700 w-full sm:w-[92%] lg:w-[80%] shadow-2xl flex flex-col h-[100dvh] max-h-[100dvh] sm:h-[90vh] sm:max-h-[90vh]" onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200 dark:border-stone-700 shrink-0">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between px-4 py-4 sm:px-6 border-b border-stone-200 dark:border-stone-700 shrink-0">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-lg flex items-center justify-center text-white text-sm">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
@@ -697,7 +697,7 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
             </div>
             <div>
               <h2 className="text-stone-900 dark:text-white font-bold text-sm">{isZh ? 'API 设置' : 'API Settings'}</h2>
-              <p className="text-stone-500 text-xs">{isZh ? '配置文本思考和图片生成 API，支持多源 fallback' : 'Configure text & image APIs with fallback'}</p>
+              <p className="text-stone-500 text-xs leading-relaxed">{isZh ? '配置文本思考和图片生成 API，支持多源 fallback' : 'Configure text & image APIs with fallback'}</p>
             </div>
           </div>
           {onClose && (
@@ -708,11 +708,11 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
         </div>
 
         {/* Body */}
-        <div className="flex-1 min-h-0 overflow-hidden px-6 py-5">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full min-h-0">
+        <div className="flex-1 min-h-0 overflow-y-auto sm:overflow-hidden px-4 py-4 sm:px-6 sm:py-5">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 min-h-0 lg:h-full">
             {/* Left: API Config */}
             <div className="lg:col-span-2 flex flex-col h-full min-h-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 min-h-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 flex-1 min-h-0">
                 {/* Text APIs */}
                 <div className="flex flex-col min-h-0">
                   <div className="flex items-center justify-between shrink-0 mb-3">
@@ -895,7 +895,7 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-stone-200 dark:border-stone-700 flex items-center justify-between shrink-0">
+        <div className="px-4 py-4 sm:px-6 border-t border-stone-200 dark:border-stone-700 flex items-center justify-between gap-3 shrink-0">
           <p className="text-stone-400 dark:text-stone-500 text-[10px]">
             {isZh ? 'API Key 仅保存在浏览器本地' : 'API Keys are stored locally in your browser only'}
           </p>

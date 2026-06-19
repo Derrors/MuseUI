@@ -172,12 +172,12 @@ export const LogoPanel: React.FC<Props> = ({ config, onChange, lang }) => {
         <label className="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1.5">
           {isZh ? '尺寸' : 'Size'}
         </label>
-        <div className="grid grid-cols-5 gap-1.5">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
           {LOGO_SIZES.map((s) => (
             <button
               key={s.id}
               onClick={() => update({ size: s.id as any })}
-              className={`px-2 py-1.5 text-xs rounded-lg border transition-colors ${
+              className={`min-h-10 px-2 py-1.5 text-xs rounded-lg border transition-colors ${
                 config.size === s.id
                   ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400'
                   : 'border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:border-stone-300 dark:hover:border-stone-600'

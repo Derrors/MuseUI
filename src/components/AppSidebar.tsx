@@ -252,7 +252,7 @@ const AppSidebar: React.FC<Props> = (props) => {
     const isFree = props.activeRole === 'free';
 
     return (
-        <div className="w-[360px] bg-white dark:bg-stone-900 border-r border-stone-200 dark:border-stone-800 flex flex-col z-10 shrink-0">
+        <div className="w-full md:w-[360px] bg-white dark:bg-stone-900 border-r border-stone-200 dark:border-stone-800 flex flex-col shrink-0 min-w-0">
             <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
                 {/* Role Switcher Dropdown */}
                 <div className="flex items-center gap-2">
@@ -279,7 +279,7 @@ const AppSidebar: React.FC<Props> = (props) => {
 
                         {isRoleDropdownOpen && (
                             <div className="absolute z-30 left-0 right-0 mt-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl shadow-xl overflow-hidden">
-                            <div className="p-2 grid grid-cols-3 gap-1.5">
+                            <div className="p-2 grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                                 {ROLES.map(role => {
                                     const isActive = role.id === props.activeRole;
                                     return (

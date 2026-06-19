@@ -32,11 +32,11 @@ const ChangelogModal: React.FC<Props> = ({ lang, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-stone-900 rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4">
+      <div className="bg-white dark:bg-stone-900 rounded-none sm:rounded-2xl shadow-2xl w-full max-w-lg h-[100dvh] sm:h-auto sm:max-h-[80vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-stone-200 dark:border-stone-700 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
+        <div className="px-4 py-4 sm:px-6 border-b border-stone-200 dark:border-stone-700 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-teal-600 dark:text-teal-400">
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
@@ -63,7 +63,7 @@ const ChangelogModal: React.FC<Props> = ({ lang, onClose }) => {
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto flex-1 p-6 space-y-6">
+        <div className="overflow-y-auto flex-1 p-4 sm:p-6 space-y-6">
           {months.map((month) => (
             <div key={month}>
               <div className="flex items-center gap-3 mb-3">
@@ -83,7 +83,7 @@ const ChangelogModal: React.FC<Props> = ({ lang, onClose }) => {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t border-stone-200 dark:border-stone-700 text-center shrink-0">
+        <div className="px-4 py-3 sm:px-6 border-t border-stone-200 dark:border-stone-700 text-center shrink-0">
           <p className="text-xs text-stone-400">
             {lang === 'zh' ? '持续更新中，敬请期待更多功能 ✨' : 'More features coming soon ✨'}
           </p>
@@ -102,8 +102,8 @@ const EntryCard: React.FC<{
 
   return (
     <div className="bg-stone-50 dark:bg-stone-800/50 rounded-xl p-4 border border-stone-100 dark:border-stone-700/50">
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
+        <div className="flex min-w-0 items-center gap-2">
           <span className="font-mono text-sm font-bold text-stone-700 dark:text-stone-200">
             v{entry.version}
           </span>

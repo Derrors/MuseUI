@@ -28,6 +28,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest",
+    "test:mobile-layout": "node tests/mobile-layout-check.cjs",
     "test:watch": "vitest --watch"
   },
   "dependencies": {

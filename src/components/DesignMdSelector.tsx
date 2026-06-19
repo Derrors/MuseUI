@@ -293,10 +293,10 @@ const DesignMdSelector: React.FC<Props> = ({
                     />
 
                     {/* Modal Content */}
-                    <div className={`relative z-10 ${showPreview ? 'w-[1300px]' : 'w-[720px]'} max-w-[97vw] max-h-[85vh] h-auto bg-white dark:bg-stone-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden`}>
+                    <div className={`relative z-10 w-full h-[100dvh] max-w-full max-h-[100dvh] sm:h-auto sm:max-w-[97vw] sm:max-h-[85vh] ${showPreview ? 'sm:w-[1300px]' : 'sm:w-[720px]'} bg-white dark:bg-stone-900 rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden`}>
                         {/* Header */}
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200 dark:border-stone-800 shrink-0">
-                            <div>
+                        <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-6 border-b border-stone-200 dark:border-stone-800 shrink-0">
+                            <div className="min-w-0">
                                 <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100">
                                     {modalTitleText}
                                 </h2>
@@ -327,10 +327,10 @@ const DesignMdSelector: React.FC<Props> = ({
                         </div>
 
                         {/* Toolbar: Search + Tabs */}
-                        <div className="px-6 py-3 border-b border-stone-200 dark:border-stone-800 flex items-center gap-4 bg-stone-50/50 dark:bg-stone-950/50 shrink-0">
+                        <div className="px-4 py-3 sm:px-6 border-b border-stone-200 dark:border-stone-800 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 bg-stone-50/50 dark:bg-stone-950/50 shrink-0">
                             {/* Search */}
                             {showSearch && (
-                                <div className="relative flex-1 max-w-md">
+                                <div className="relative w-full sm:flex-1 sm:max-w-md">
                                     <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                     </svg>
@@ -392,9 +392,9 @@ const DesignMdSelector: React.FC<Props> = ({
                         </div>
 
                         {/* Body */}
-                        <div className={`flex-1 overflow-hidden ${showPreview ? 'flex' : ''}`}>
+                        <div className={`flex-1 overflow-hidden ${showPreview ? 'flex flex-col lg:flex-row' : ''}`}>
                             {/* Left: Template Grid */}
-                            <div className={`overflow-y-auto p-6 ${showPreview ? 'flex-1' : 'w-full h-full'}`}>
+                            <div className={`overflow-y-auto p-4 sm:p-6 ${showPreview ? 'flex-1' : 'w-full h-full'}`}>
                                 {isLoadingTemplates ? (
                                     <div className="flex flex-col items-center justify-center h-full text-stone-400 dark:text-stone-600">
                                         <svg className="w-10 h-10 mb-3 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -411,7 +411,7 @@ const DesignMdSelector: React.FC<Props> = ({
                                         <p className="text-xs mt-1">{isZh ? '尝试其他关键词' : 'Try different keywords'}</p>
                                     </div>
                                 ) : (
-                                    <div className={`grid gap-3 ${showPreview ? 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'}`}>
+                                    <div className={`grid gap-3 ${showPreview ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1 sm:grid-cols-3'}`}>
                                         {filteredTemplates.map(t => (
                                             <button
                                                 key={t.id}
@@ -479,7 +479,7 @@ const DesignMdSelector: React.FC<Props> = ({
 
                             {/* Right: Preview Panel */}
                             {showPreview && (
-                                <div className="w-[380px] border-l border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950 flex flex-col shrink-0">
+                                <div className="w-full lg:w-[380px] max-h-[42vh] lg:max-h-none border-t lg:border-t-0 lg:border-l border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950 flex flex-col shrink-0">
                                     <div className="px-4 py-3 border-b border-stone-200 dark:border-stone-800">
                                         <span className="text-xs font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider">
                                             {isZh ? '内容预览' : 'Content Preview'}

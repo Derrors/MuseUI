@@ -53,6 +53,7 @@ const CanvasBoard: React.FC<Props> = ({
     const dotGridRef = useRef<HTMLDivElement>(null);
     const transitionRemovedRef = useRef(false);
     const isPanningRef = useRef(false);
+    const lastTouchDistance = useRef<number | null>(null);
     const syncTimeoutRef = useRef<ReturnType<typeof setTimeout>>(0 as any);
     const [guides, setGuides] = useState<{ type: 'v' | 'h'; pos: number }[]>([]);
     const [contextMenu, setContextMenu] = useState<{ x: number, y: number, artboardId: string } | null>(null);
@@ -259,6 +260,87 @@ const CanvasBoard: React.FC<Props> = ({
     const handleContextMenu = (e: React.MouseEvent, artboardId: string) => { e.preventDefault(); e.stopPropagation(); setContextMenu({ x: e.clientX, y: e.clientY, artboardId }); };
     const handleRegenerateClick = () => { if (contextMenu) { onRegenerateArtboard(contextMenu.artboardId); setContextMenu(null); } };
 
+    const getTouchDistance = (touches: React.TouchList) => {
+        if (touches.length < 2) return 0;
+        const dx = touches[0].clientX - touches[1].clientX;
+        const dy = touches[0].clientY - touches[1].clientY;
+        return Math.hypot(dx, dy);
+    };
+
+    const getTouchCenter = (touches: React.TouchList) => ({
+        x: (touches[0].clientX + touches[1].clientX) / 2,
+        y: (touches[0].clientY + touches[1].clientY) / 2,
+    });
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        setContextMenu(null);
+        if (e.touches.length === 1) {
+            const touch = e.touches[0];
+            setIsPanning(true);
+            isPanningRef.current = true;
+            lastMousePos.current = { x: touch.clientX, y: touch.clientY };
+            if (transformLayerRef.current) {
+                transformLayerRef.current.style.transition = 'none';
+                transformLayerRef.current.style.pointerEvents = 'none';
+                transitionRemovedRef.current = true;
+            }
+        }
+        if (e.touches.length === 2) {
+            lastTouchDistance.current = getTouchDistance(e.touches);
+            isPanningRef.current = false;
+            setIsPanning(false);
+        }
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!containerRef.current) return;
+        e.preventDefault();
+
+        if (e.touches.length === 1 && isPanningRef.current) {
+            const touch = e.touches[0];
+            const dx = touch.clientX - lastMousePos.current.x;
+            const dy = touch.clientY - lastMousePos.current.y;
+            const newPos = { x: posRef.current.x + dx, y: posRef.current.y + dy };
+            posRef.current = newPos;
+            applyTransformToDOM(newPos, scaleRef.current);
+            lastMousePos.current = { x: touch.clientX, y: touch.clientY };
+            scheduleSyncToReact(newPos, scaleRef.current);
+            return;
+        }
+
+        if (e.touches.length === 2) {
+            const prevDistance = lastTouchDistance.current || getTouchDistance(e.touches);
+            const nextDistance = getTouchDistance(e.touches);
+            if (prevDistance <= 0) return;
+
+            const ratio = nextDistance / prevDistance;
+            const prevScale = scaleRef.current;
+            const nextScale = Math.min(Math.max(prevScale * ratio, 0.1), 5);
+            const center = getTouchCenter(e.touches);
+            const rect = containerRef.current.getBoundingClientRect();
+            const centerX = center.x - rect.left;
+            const centerY = center.y - rect.top;
+            const prevPos = posRef.current;
+            const worldX = (centerX - prevPos.x) / prevScale;
+            const worldY = (centerY - prevPos.y) / prevScale;
+            const newPos = {
+                x: centerX - worldX * nextScale,
+                y: centerY - worldY * nextScale,
+            };
+
+            lastTouchDistance.current = nextDistance;
+            scaleRef.current = nextScale;
+            posRef.current = newPos;
+            applyTransformToDOM(newPos, nextScale);
+            scheduleSyncToReact(newPos, nextScale);
+        }
+    };
+
+    const handleTouchEnd = () => {
+        lastTouchDistance.current = null;
+        handleMouseUp();
+    };
+
     const handleDoubleClick = (e: React.MouseEvent, artboardId: string) => {
         e.stopPropagation();
         const board = artboards.find(b => b.id === artboardId);
@@ -315,7 +397,7 @@ const CanvasBoard: React.FC<Props> = ({
             <div ref={dotGridRef} className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, #888 1px, transparent 1px)', backgroundSize: `${Math.max(2, 20 * scale)}px ${Math.max(2, 20 * scale)}px`, backgroundPosition: `${position?.x ?? 0}px ${position?.y ?? 0}px`, transition: 'opacity 0.15s ease-out' }} />
             {isDragOver && (<div className="absolute inset-0 bg-teal-500/20 z-50 flex items-center justify-center border-4 border-teal-500 border-dashed pointer-events-none"><span className="text-2xl font-bold text-teal-600 bg-white/80 px-4 py-2 rounded">{lang === 'zh' ? '释放以上传图片到画布' : 'Drop to add image to canvas'}</span></div>)}
 
-            <div ref={containerRef} className={`w-full h-full ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`} onMouseDown={(e) => handleMouseDown(e)} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
+            <div ref={containerRef} className={`w-full h-full touch-none ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`} onMouseDown={(e) => handleMouseDown(e)} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onTouchCancel={handleTouchEnd} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
                 <div
                     ref={transformLayerRef}
                     style={{ transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`, transformOrigin: '0 0', willChange: 'transform' }}
@@ -335,7 +417,7 @@ const CanvasBoard: React.FC<Props> = ({
                             >
                                 <div
                                     style={{ transform: `scale(${Math.min(5, 1 / Math.max(0.01, scale))})`, transformOrigin: 'bottom left' }}
-                                    className="bg-white dark:bg-stone-800 shadow-lg border border-stone-200 dark:border-stone-700 rounded-lg flex items-center p-1.5 gap-2 transition-[opacity,transform] opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 duration-200"
+                                    className="bg-white dark:bg-stone-800 shadow-lg border border-stone-200 dark:border-stone-700 rounded-lg flex items-center p-1.5 gap-2 transition-[opacity,transform] opacity-100 translate-y-0 md:opacity-0 md:group-hover:opacity-100 md:translate-y-2 md:group-hover:translate-y-0 duration-200"
                                 >
                                     {/* Editable Label */}
                                     <div className="flex items-center">
@@ -376,7 +458,7 @@ const CanvasBoard: React.FC<Props> = ({
                                                         if (currIdx > 0 && onUpdateArtboard) onUpdateArtboard(board.id, { image: hist[currIdx - 1] });
                                                     }}
                                                     disabled={!onUpdateArtboard || board.history.findIndex(h => h.id === board.image.id) <= 0}
-                                                    className="p-1 hover:bg-stone-200 dark:hover:bg-stone-600 text-stone-500 disabled:opacity-30"
+                                                    className="p-2 md:p-1 hover:bg-stone-200 dark:hover:bg-stone-600 text-stone-500 disabled:opacity-30"
                                                     title={lang === 'zh' ? '上一版' : 'Previous Version'}
                                                 >
                                                     <IconLoader name="chevron-left" size={12} />
@@ -389,7 +471,7 @@ const CanvasBoard: React.FC<Props> = ({
                                                         if (currIdx < hist.length - 1 && onUpdateArtboard) onUpdateArtboard(board.id, { image: hist[currIdx + 1] });
                                                     }}
                                                     disabled={!onUpdateArtboard || board.history.findIndex(h => h.id === board.image.id) >= board.history.length - 1}
-                                                    className="p-1 hover:bg-stone-200 dark:hover:bg-stone-600 text-stone-500 disabled:opacity-30"
+                                                    className="p-2 md:p-1 hover:bg-stone-200 dark:hover:bg-stone-600 text-stone-500 disabled:opacity-30"
                                                     title={lang === 'zh' ? '下一版' : 'Next Version'}
                                                 >
                                                     <IconLoader name="chevron-right" size={12} />
@@ -400,7 +482,7 @@ const CanvasBoard: React.FC<Props> = ({
                                         {onInspectArtboard && (
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); onInspectArtboard(board.image); }}
-                                                className="p-1 hover:bg-stone-100 dark:hover:bg-stone-700 rounded text-stone-500 hover:text-teal-500 transition-colors"
+                                                className="p-2 md:p-1 hover:bg-stone-100 dark:hover:bg-stone-700 rounded text-stone-500 hover:text-teal-500 transition-colors"
                                                 title={lang === 'zh' ? '详情' : 'Info'}
                                             >
                                                 <IconLoader name="info" size={14} />
@@ -411,7 +493,7 @@ const CanvasBoard: React.FC<Props> = ({
                                         {board.history && board.history.length > 0 && (
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); setHistoryModalOpen(board.id); }}
-                                                className="p-1 hover:bg-stone-100 dark:hover:bg-stone-700 rounded text-stone-500 hover:text-cyan-500 transition-colors"
+                                                className="p-2 md:p-1 hover:bg-stone-100 dark:hover:bg-stone-700 rounded text-stone-500 hover:text-cyan-500 transition-colors"
                                                 title={lang === 'zh' ? '历史版本' : 'History'}
                                             >
                                                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -430,7 +512,7 @@ const CanvasBoard: React.FC<Props> = ({
                                                 link.click();
                                                 document.body.removeChild(link);
                                             }}
-                                            className="p-1 hover:bg-stone-100 dark:hover:bg-stone-700 rounded text-stone-500 hover:text-cyan-500 transition-colors"
+                                            className="p-2 md:p-1 hover:bg-stone-100 dark:hover:bg-stone-700 rounded text-stone-500 hover:text-cyan-500 transition-colors"
                                             title={lang === 'zh' ? '下载图片' : 'Download Image'}
                                         >
                                             <IconLoader name="download" size={14} />
@@ -439,7 +521,7 @@ const CanvasBoard: React.FC<Props> = ({
                                         {onCopyImage && (
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); onCopyImage(board.image.url); }}
-                                                className="p-1 hover:bg-stone-100 dark:hover:bg-stone-700 rounded text-stone-500 hover:text-teal-500 transition-colors"
+                                                className="p-2 md:p-1 hover:bg-stone-100 dark:hover:bg-stone-700 rounded text-stone-500 hover:text-teal-500 transition-colors"
                                                 title={lang === 'zh' ? '复制到参考图' : 'Copy to Reference'}
                                             >
                                                 <IconLoader name="copy" size={14} />
@@ -448,7 +530,7 @@ const CanvasBoard: React.FC<Props> = ({
 
                                         <button
                                             onClick={(e) => { e.stopPropagation(); onRegenerateArtboard(board.id); }}
-                                            className="p-1 hover:bg-stone-100 dark:hover:bg-stone-700 rounded text-stone-500 hover:text-teal-500 transition-colors"
+                                            className="p-2 md:p-1 hover:bg-stone-100 dark:hover:bg-stone-700 rounded text-stone-500 hover:text-teal-500 transition-colors"
                                             title={lang === 'zh' ? '重新生成' : 'Regenerate'}
                                         >
                                             <IconLoader name="magic-wand" size={14} />
@@ -462,7 +544,7 @@ const CanvasBoard: React.FC<Props> = ({
                                                     () => onDeleteArtboard(board.id)
                                                 );
                                             }}
-                                            className="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-stone-500 hover:text-red-500 transition-colors"
+                                            className="p-2 md:p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-stone-500 hover:text-red-500 transition-colors"
                                             title={lang === 'zh' ? '删除' : 'Delete'}
                                         >
                                             <IconLoader name="trash" size={14} />
@@ -500,7 +582,7 @@ const CanvasBoard: React.FC<Props> = ({
             </div>
 
             {/* Controls */}
-            <div className="absolute bottom-6 right-6 flex items-center gap-2 bg-white dark:bg-stone-800 p-2 rounded-lg shadow-lg border border-stone-200 dark:border-stone-700">
+            <div className="absolute left-3 right-3 bottom-3 md:left-auto md:right-6 md:bottom-6 flex items-center gap-2 overflow-x-auto bg-white dark:bg-stone-800 p-2 rounded-lg shadow-lg border border-stone-200 dark:border-stone-700">
                 <button onClick={() => setScale(s => Math.max(0.1, s - 0.1))} className="p-2 hover:bg-stone-100 dark:hover:bg-stone-700 rounded text-stone-600 dark:text-stone-300">-</button>
                 <span className="text-xs font-mono w-10 text-center text-stone-600 dark:text-stone-300">{Math.round(scale * 100)}%</span>
                 <button onClick={() => setScale(s => Math.min(5, s + 0.1))} className="p-2 hover:bg-stone-100 dark:hover:bg-stone-700 rounded text-stone-600 dark:text-stone-300">+</button>

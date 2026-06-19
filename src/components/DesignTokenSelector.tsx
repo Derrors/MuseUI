@@ -219,13 +219,13 @@ const DesignTokenSelector: React.FC<Props> = ({ tokens, onChange, enabled, onTog
             {/* Radius */}
             <div className={!enabled ? 'opacity-50 pointer-events-none' : ''}>
             <label className="text-xs text-stone-600 dark:text-stone-400 block mb-1">{t.radius}</label>
-            <div className="grid grid-cols-5 gap-1">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-1">
                 {(['none', 'small', 'medium', 'large', 'full'] as const).map(r => (
                 <button
                     key={r}
                     onClick={() => onChange({ ...tokens, borderRadius: r })}
                     disabled={!enabled}
-                    className={`text-[10px] py-1 rounded border transition-colors ${
+                    className={`min-h-10 text-[10px] py-1 rounded border transition-colors ${
                     tokens.borderRadius === r 
                         ? 'bg-teal-500/20 border-teal-500 text-teal-600 dark:text-teal-200' 
                         : 'bg-white dark:bg-stone-800 border-stone-300 dark:border-stone-600 text-stone-600 dark:text-stone-400 hover:border-stone-500'
@@ -252,7 +252,7 @@ const DesignTokenSelector: React.FC<Props> = ({ tokens, onChange, enabled, onTog
                     key={s}
                     onClick={() => onChange({ ...tokens, spacing: s })}
                     disabled={!enabled}
-                    className={`text-[10px] py-1 rounded border transition-colors ${
+                    className={`min-h-10 text-[10px] py-1 rounded border transition-colors ${
                     tokens.spacing === s
                         ? 'bg-teal-500/20 border-teal-500 text-teal-600 dark:text-teal-200' 
                         : 'bg-white dark:bg-stone-800 border-stone-300 dark:border-stone-600 text-stone-600 dark:text-stone-400 hover:border-stone-500'
