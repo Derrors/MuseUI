@@ -5,13 +5,13 @@
   "license": "MIT",
   "type": "module",
   "author": "MuseUI contributors",
-  "homepage": "https://github.com/Leochens/MuseUI#readme",
+  "homepage": "https://github.com/Derrors/MuseUI#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Leochens/MuseUI.git"
+    "url": "git+https://github.com/Derrors/MuseUI.git"
   },
   "bugs": {
-    "url": "https://github.com/Leochens/MuseUI/issues"
+    "url": "https://github.com/Derrors/MuseUI/issues"
   },
   "keywords": [
     "ai",

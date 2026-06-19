@@ -4,7 +4,7 @@
 
 Please report security issues privately through GitHub Security Advisories for this repository:
 
-https://github.com/Leochens/MuseUI/security/advisories/new
+https://github.com/Derrors/MuseUI/security/advisories/new
 
 Do not open a public issue containing credentials, exploit details, or private user data. If GitHub private vulnerability reporting is unavailable, contact the repository owner privately through their GitHub profile and include a minimal description of the affected area.
 

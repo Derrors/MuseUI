@@ -167,7 +167,7 @@ const AppHeader: React.FC<Props> = ({
             )}
           </button>
           <a
-            href="https://github.com/Leochens/MuseUI"
+            href="https://github.com/Derrors/MuseUI"
             target="_blank"
             rel="noreferrer"
             aria-label={lang === 'zh' ? '打开 MuseUI GitHub 仓库' : 'Open MuseUI on GitHub'}
