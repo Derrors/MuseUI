@@ -6,7 +6,13 @@ import { useProjectState } from './useProjectState';
 import { useCanvasState } from './useCanvasState';
 import { useGenerationLogic } from './useGenerationLogic';
 import { getAssetDetails } from '../services/idbHistoryService';
-import { AppConfigExport, Project } from '../types';
+import { Project } from '../types';
+import {
+    buildExportConfig,
+    buildProjectConfigSnapshot,
+    restoreConfigSnapshot,
+    restoreProjectConfig as restoreProjectConfigSnapshot,
+} from '../domain/projects/snapshots';
 import html2canvas from 'html2canvas';
 
 export const useAppLogic = (initialProjectId?: string) => {
@@ -20,50 +26,8 @@ export const useAppLogic = (initialProjectId?: string) => {
     // 3. Config State
     const config = useConfigState();
 
-    const hasConfigValue = (source: Record<string, unknown>, key: string) =>
-        Object.prototype.hasOwnProperty.call(source, key);
-
-    const restoreConfigSnapshot = (snapshot?: Record<string, any> | null) => {
-        if (!snapshot) return;
-
-        if (hasConfigValue(snapshot, 'platform')) config.setPlatform(snapshot.platform);
-        if (hasConfigValue(snapshot, 'resolution')) config.setResolution(snapshot.resolution);
-        if (hasConfigValue(snapshot, 'customSize')) config.setCustomSize(snapshot.customSize);
-        if (hasConfigValue(snapshot, 'customStyles')) config.setCustomStyles(snapshot.customStyles || []);
-        if (hasConfigValue(snapshot, 'style')) config.setStyle(snapshot.style);
-        if (hasConfigValue(snapshot, 'description')) config.setDescription(snapshot.description || '');
-        if (hasConfigValue(snapshot, 'pageName')) config.setPageName(snapshot.pageName || '');
-        if (hasConfigValue(snapshot, 'keywords')) config.setKeywords(snapshot.keywords || []);
-        if (hasConfigValue(snapshot, 'enableDesignTokens')) config.setEnableDesignTokens(!!snapshot.enableDesignTokens);
-        if (hasConfigValue(snapshot, 'designTokens')) config.setDesignTokens(snapshot.designTokens);
-        if (hasConfigValue(snapshot, 'background')) config.setBackground(snapshot.background);
-        if (hasConfigValue(snapshot, 'highQuality')) config.setHighQuality(!!snapshot.highQuality);
-        if (hasConfigValue(snapshot, 'forceChinese')) config.setForceChinese(!!snapshot.forceChinese);
-        if (hasConfigValue(snapshot, 'promptLanguage')) config.setPromptLanguage(snapshot.promptLanguage ?? null);
-        if (hasConfigValue(snapshot, 'preferredImageApiId')) config.setPreferredImageApiId(snapshot.preferredImageApiId ?? null);
-        if (hasConfigValue(snapshot, 'designMdId')) config.setDesignMdId(snapshot.designMdId ?? null);
-        if (hasConfigValue(snapshot, 'designMdContent')) config.setDesignMdContent(snapshot.designMdContent ?? null);
-        if (hasConfigValue(snapshot, 'visualStyleId')) config.setVisualStyleId(snapshot.visualStyleId ?? null);
-        if (hasConfigValue(snapshot, 'visualStyleContent')) config.setVisualStyleContent(snapshot.visualStyleContent ?? null);
-        if (hasConfigValue(snapshot, 'layoutDensityId')) config.setLayoutDensityId(snapshot.layoutDensityId ?? null);
-        if (hasConfigValue(snapshot, 'layoutDensityContent')) config.setLayoutDensityContent(snapshot.layoutDensityContent ?? null);
-        if (hasConfigValue(snapshot, 'isBatchMode')) config.setIsBatchMode(!!snapshot.isBatchMode);
-        if (hasConfigValue(snapshot, 'batchOutputMode')) config.setBatchOutputMode(snapshot.batchOutputMode);
-        if (hasConfigValue(snapshot, 'specMode')) config.setSpecMode(snapshot.specMode);
-        if (hasConfigValue(snapshot, 'pages')) config.setPages(snapshot.pages || []);
-        if (hasConfigValue(snapshot, 'mediaAspectRatio')) config.setMediaAspectRatio(snapshot.mediaAspectRatio);
-        if (hasConfigValue(snapshot, 'mediaResolution')) config.setMediaResolution(snapshot.mediaResolution);
-        if (hasConfigValue(snapshot, 'mediaType')) config.setMediaType(snapshot.mediaType);
-        if (hasConfigValue(snapshot, 'activeRole')) config.setActiveRole(snapshot.activeRole);
-        if (hasConfigValue(snapshot, 'skillMode')) config.setSkillMode(!!snapshot.skillMode);
-        if (hasConfigValue(snapshot, 'activeSkill')) config.setActiveSkill(snapshot.activeSkill ?? null);
-        if (hasConfigValue(snapshot, 'skillConfig')) config.setSkillConfig(snapshot.skillConfig ?? null);
-        if (hasConfigValue(snapshot, 'layoutImage')) canvas.updateLayoutImage(snapshot.layoutImage ?? null);
-        if (hasConfigValue(snapshot, 'layoutElements')) canvas.setLayoutElements(snapshot.layoutElements || []);
-    };
-
     const restoreProjectConfig = (p: Project) => {
-        restoreConfigSnapshot(p.config as Record<string, any> | undefined);
+        restoreProjectConfigSnapshot(p, config, canvas);
     };
 
     // 4. Project State
@@ -93,22 +57,7 @@ export const useAppLogic = (initialProjectId?: string) => {
     const lastSavedRef = useRef<string>('');
 
     // Define current config object helper
-    const currentConfigObject = {
-        platform: config.platform, resolution: config.resolution, customSize: config.customSize, style: config.style,
-        customStyles: config.customStyles,
-        description: config.description, pageName: config.pageName, keywords: config.keywords, enableDesignTokens: config.enableDesignTokens,
-        designTokens: config.designTokens, background: config.background, highQuality: config.highQuality,
-        forceChinese: config.forceChinese,
-        promptLanguage: config.promptLanguage, preferredImageApiId: config.preferredImageApiId,
-        designMdId: config.designMdId, designMdContent: config.designMdContent,
-        visualStyleId: config.visualStyleId, visualStyleContent: config.visualStyleContent,
-        layoutDensityId: config.layoutDensityId, layoutDensityContent: config.layoutDensityContent,
-        isBatchMode: config.isBatchMode, batchOutputMode: config.batchOutputMode, specMode: config.specMode, pages: config.pages,
-        activeRole: config.activeRole,
-        mediaAspectRatio: config.mediaAspectRatio, mediaResolution: config.mediaResolution, mediaType: config.mediaType,
-        skillMode: config.skillMode, activeSkill: config.activeSkill, skillConfig: config.skillConfig,
-        layoutImage: canvas.layoutImage, layoutElements: canvas.layoutElements,
-    };
+    const currentConfigObject = buildProjectConfigSnapshot(config, canvas);
     const currentConfigString = JSON.stringify(currentConfigObject);
 
     useEffect(() => {
@@ -162,17 +111,7 @@ export const useAppLogic = (initialProjectId?: string) => {
 
     // --- Export / Import Config ---
     const handleExportConfig = async () => {
-        const exportData: AppConfigExport = {
-            version: 1, timestamp: Date.now(),
-            ...currentConfigObject,
-            designMdId: currentConfigObject.designMdId || undefined,
-            designMdContent: currentConfigObject.designMdContent || undefined,
-            visualStyleId: currentConfigObject.visualStyleId || undefined,
-            visualStyleContent: currentConfigObject.visualStyleContent || undefined,
-            layoutDensityId: currentConfigObject.layoutDensityId || undefined,
-            layoutDensityContent: currentConfigObject.layoutDensityContent || undefined,
-            styleImages: [], contentImages: [], // TODO: support images
-        };
+        const exportData = buildExportConfig(currentConfigObject);
         // Download logic...
         const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -186,8 +125,8 @@ export const useAppLogic = (initialProjectId?: string) => {
         const reader = new FileReader();
         reader.onload = async (ev) => {
             try {
-                const data: AppConfigExport = JSON.parse(ev.target?.result as string);
-                restoreConfigSnapshot(data as unknown as Record<string, any>);
+                const data = JSON.parse(ev.target?.result as string);
+                restoreConfigSnapshot(data as unknown as Record<string, any>, config, canvas);
 
                 ui.addNotification(ui.lang === 'zh' ? '配置导入成功' : 'Configuration imported successfully', 'success');
             } catch (error) {

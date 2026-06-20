@@ -101,4 +101,61 @@ describe('useGenerationLogic', () => {
         expect(aiGenerationService.generateUIReference).toHaveBeenCalled();
         expect(mockCanvas.setArtboards).toHaveBeenCalled();
     });
+
+    it('should preserve the latest prompt when regenerating an artboard', async () => {
+        const oldImage: any = {
+            id: 'old-img',
+            url: 'old.png',
+            prompt: 'old prompt',
+            timestamp: 1,
+            details: {
+                platform: 'mobile',
+                resolution: '375x667',
+                style: 'Modern',
+                tokens: {},
+                fullPrompt: 'old full prompt',
+                batchId: 'batch-1',
+                originalDescription: 'Original description',
+            },
+        };
+        const artboards: any[] = [{
+            id: 'board-1',
+            x: 0,
+            y: 0,
+            width: 375,
+            height: 667,
+            image: oldImage,
+            history: [oldImage],
+            label: 'Home',
+        }];
+        const canvas = {
+            ...mockCanvas,
+            artboards,
+            setArtboards: vi.fn(),
+            getImageDimensions: vi.fn().mockResolvedValue({ width: 400, height: 700 }),
+        };
+        const mockAsset = {
+            id: 'new-img',
+            url: 'new.png',
+            prompt: 'new prompt',
+            timestamp: 2,
+            base64: 'new-b64',
+        };
+
+        (aiGenerationService.generateUIReference as any).mockResolvedValue(mockAsset);
+
+        const { result } = renderHook(() => useGenerationLogic(lang, mockConfig, canvas));
+
+        await act(async () => {
+            await result.current.handleRegenerateArtboard('board-1', 'Make it brighter', null, null, null);
+        });
+
+        const updater = canvas.setArtboards.mock.calls[0][0];
+        const nextArtboards = updater(artboards);
+
+        expect(nextArtboards[0].image.details.fullPrompt).toContain('Make it brighter');
+        expect(nextArtboards[0].image.details.fullPrompt).not.toBe('old full prompt');
+        expect(nextArtboards[0].image.details.batchId).toBe('batch-1');
+        expect(nextArtboards[0].image.details.resolution).toBe('400x700');
+    });
 });
