@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { RequestLogEntry } from '../types';
-import { getRequestLogs } from '../services/apiKeyStore';
+import { clearRequestLogs, getRequestLogs } from '../services/apiKeyStore';
 
 interface Props {
   lang: 'en' | 'zh';
@@ -17,6 +17,11 @@ const DevRequestMonitor: React.FC<Props> = ({ lang }) => {
     const timer = setInterval(load, 2000);
     return () => clearInterval(timer);
   }, []);
+
+  const handleClear = () => {
+    clearRequestLogs();
+    setLogs([]);
+  };
 
   if (collapsed) {
     return (
@@ -37,7 +42,7 @@ const DevRequestMonitor: React.FC<Props> = ({ lang }) => {
         </span>
         <div className="flex items-center gap-1">
           <button
-            onClick={() => setLogs([])}
+            onClick={handleClear}
             className="text-[9px] text-stone-500 hover:text-stone-300 px-1.5 py-0.5 rounded hover:bg-stone-700 transition-colors"
           >
             {isZh ? '清空' : 'Clear'}
