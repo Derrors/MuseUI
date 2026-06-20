@@ -58,34 +58,6 @@ const AppHeader: React.FC<Props> = ({
             <img src="/logo.png" alt="MuseUI" className="w-8 h-8 rounded-lg object-cover" />
             <h1 className="hidden sm:block font-bold text-stone-800 dark:text-stone-100 text-lg">MuseUI</h1>
           </a>
-          <a
-            href="https://world.guantou.site/"
-            target="_blank"
-            rel="noreferrer"
-            aria-label="Visit GuanTou Lab portfolio"
-            className="hidden sm:inline-flex shrink-0 hover:opacity-85 transition-opacity"
-          >
-            <img
-              src={`https://world.guantou.site/badge.svg?theme=${theme === 'dark' ? 'dark' : 'light'}&accent=red&lang=${lang === 'zh' ? 'zh' : 'en'}&size=sm`}
-              alt="GuanTou Lab"
-              width="220"
-              height="52"
-              className="h-[26px] w-[110px]"
-            />
-          </a>
-          <a
-            href="https://sticker.guantou.site/"
-            target="_blank"
-            rel="noreferrer"
-            aria-label={lang === 'zh' ? '打开免费的表情包贴纸生成工具' : 'Open the free sticker maker'}
-            className="hidden xl:inline-flex h-7 max-w-[280px] items-center rounded-full border border-red-200/80 bg-red-50 px-3 text-[11px] font-medium text-red-700 shadow-sm transition-colors hover:border-red-300 hover:bg-red-100 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200 dark:hover:border-red-700 dark:hover:bg-red-950/50"
-          >
-            <span className="truncate">
-              {lang === 'zh'
-                ? '想生成表情包贴纸？这个免费工具也可以用'
-                : 'Need meme stickers? Try this free tool'}
-            </span>
-          </a>
         </div>
 
         <div className="flex md:hidden items-center gap-1.5 shrink-0">
@@ -128,7 +100,8 @@ const AppHeader: React.FC<Props> = ({
           )}
           <button
             onClick={() => setShowApiSettings(true)}
-            className={`relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
+            data-mobile-api-entry
+            className={`relative flex h-10 min-w-[58px] items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-bold transition-colors ${
               hasKey
                 ? 'bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700'
                 : 'border border-amber-300 bg-amber-100 text-amber-700 hover:bg-amber-200 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50'
@@ -136,7 +109,8 @@ const AppHeader: React.FC<Props> = ({
             aria-label={lang === 'zh' ? '打开 API 设置' : 'Open API settings'}
             title={lang === 'zh' ? 'API 设置' : 'API settings'}
           >
-            <IconLoader name="settings" size={18} />
+            <IconLoader name="settings" size={16} />
+            <span className="leading-none">API</span>
             {!hasKey && <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-amber-500" />}
           </button>
           <button
@@ -150,6 +124,22 @@ const AppHeader: React.FC<Props> = ({
 
           {isMobileMenuOpen && (
             <div className="absolute right-3 top-full mt-2 w-60 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-2xl dark:border-stone-700 dark:bg-stone-900">
+              <button
+                onClick={() => { setShowApiSettings(true); setIsMobileMenuOpen(false); }}
+                data-mobile-menu-api-entry
+                className={`flex w-full items-center gap-3 px-4 py-3 text-left text-sm hover:bg-stone-100 dark:hover:bg-stone-800 ${
+                  hasKey
+                    ? 'text-stone-700 dark:text-stone-200'
+                    : 'text-amber-700 dark:text-amber-300'
+                }`}
+              >
+                <IconLoader name="settings" size={16} />
+                <span className="min-w-0 flex-1 truncate">
+                  {hasKey
+                    ? (lang === 'zh' ? 'API 设置' : 'API settings')
+                    : (lang === 'zh' ? '未设置 API Key' : 'Set API Key')}
+                </span>
+              </button>
               <button onClick={() => { onOpenGallery(); setIsMobileMenuOpen(false); }} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-stone-700 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-800">
                 <IconLoader name="image" size={16} /> {t.gallery}
               </button>

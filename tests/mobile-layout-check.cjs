@@ -183,6 +183,72 @@ async function assertApiModalUsesPageScroll(page) {
   );
 }
 
+async function assertMobileApiEntryIsReadable(page) {
+  const state = await page.evaluate(() => {
+    const api = document.querySelector('[data-mobile-api-entry]');
+    const more = document.querySelector('header button[aria-label="打开更多操作"], header button[aria-label="Open more actions"]');
+    const rectFor = (el) => {
+      if (!el) return null;
+      const rect = el.getBoundingClientRect();
+      return {
+        text: (el.textContent || '').trim().replace(/\s+/g, ' '),
+        x: Math.round(rect.x),
+        width: Math.round(rect.width),
+        right: Math.round(rect.right),
+        height: Math.round(rect.height),
+      };
+    };
+    return {
+      viewportWidth: window.innerWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      api: rectFor(api),
+      more: rectFor(more),
+    };
+  });
+
+  assert(state.api, 'mobile header: API entry is missing', state);
+  assert(state.api.text.includes('API'), 'mobile header: API entry label is not visible', state);
+  assert(state.api.width >= 56, 'mobile header: API entry is too narrow to be readable', state);
+  assert(state.api.right <= state.viewportWidth - 44, 'mobile header: API entry is clipped or overlaps the menu button', state);
+  assert(state.more && state.more.right <= state.viewportWidth, 'mobile header: menu button overflows viewport', state);
+
+  await page.getByLabel(/更多|more/i).click();
+  const menuState = await page.evaluate(() => {
+    const item = document.querySelector('[data-mobile-menu-api-entry]');
+    if (!item) return null;
+    const rect = item.getBoundingClientRect();
+    return {
+      text: (item.textContent || '').trim().replace(/\s+/g, ' '),
+      x: Math.round(rect.x),
+      width: Math.round(rect.width),
+      right: Math.round(rect.right),
+      viewportWidth: window.innerWidth,
+    };
+  });
+
+  assert(menuState, 'mobile menu: API settings entry is missing', menuState);
+  assert(/API|Key/.test(menuState.text), 'mobile menu: API settings entry text is not readable', menuState);
+  assert(menuState.x >= 0 && menuState.right <= menuState.viewportWidth, 'mobile menu: API settings entry is clipped', menuState);
+}
+
+async function assertHeaderPromoLinksAreRemoved(page) {
+  const state = await page.evaluate(() => {
+    const links = [...document.querySelectorAll('header a')].map((link) => ({
+      href: link.getAttribute('href') || '',
+      text: (link.textContent || '').trim().replace(/\s+/g, ' '),
+      label: link.getAttribute('aria-label') || '',
+    }));
+    return {
+      links,
+      hasGuantouLab: links.some((link) => link.href.includes('world.guantou.site') || /GuanTou|罐头/.test(link.text + link.label)),
+      hasStickerPromo: links.some((link) => link.href.includes('sticker.guantou.site') || /表情包贴纸|meme stickers/i.test(link.text + link.label)),
+    };
+  });
+
+  assert(!state.hasGuantouLab, 'header: GuanTou Lab promo link should be removed', state);
+  assert(!state.hasStickerPromo, 'header: sticker promo link should be removed', state);
+}
+
 async function runChecks(url) {
   const browser = await launchChromium();
 
@@ -192,6 +258,7 @@ async function runChecks(url) {
       const state = await assertNoHorizontalOverflow(page, 'mobile config');
       assert(state.bottomNav && state.bottomNav.display !== 'none', 'mobile config: bottom navigation is not visible', state);
       assert(!state.canvas || state.canvas.display === 'none' || state.canvas.width === 0, 'mobile config: canvas should not occupy the config pane', state);
+      await assertMobileApiEntryIsReadable(page);
 
       await page.getByRole('button', { name: /画布|Canvas/ }).click();
       const canvasState = await assertNoHorizontalOverflow(page, 'mobile canvas');
@@ -200,6 +267,13 @@ async function runChecks(url) {
       await page.getByLabel(/API|Open API|打开 API/).click();
       await assertNoHorizontalOverflow(page, 'mobile API modal');
       await assertApiModalUsesPageScroll(page);
+      await context.close();
+    }
+
+    {
+      const { context, page } = await createPage(browser, url, { width: 700, height: 812 }, true);
+      await assertNoHorizontalOverflow(page, 'wide mobile header');
+      await assertHeaderPromoLinksAreRemoved(page);
       await context.close();
     }
 

@@ -103,19 +103,23 @@ const HomePage: React.FC = () => {
                                 <img src="/logo.png" alt="MuseUI" className="w-full h-full object-cover" />
                             </button>
                             {isMenuOpen && (
-                                <div className="absolute top-14 left-0 w-48 bg-white dark:bg-stone-800 rounded-xl shadow-xl border border-stone-200 dark:border-stone-700 z-50 overflow-hidden">
-                                    <button onClick={toggleTheme} className="w-full text-left px-4 py-2.5 text-sm hover:bg-stone-100 dark:hover:bg-stone-700 text-stone-600 dark:text-stone-300 flex items-center gap-2">
+                                <div className="absolute top-14 left-0 z-50 w-56 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-stone-200 bg-white shadow-xl dark:border-stone-700 dark:bg-stone-800">
+                                    <button onClick={toggleTheme} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-700">
                                         {theme === 'dark' ? <IconLoader name="sun" size={16} /> : <IconLoader name="moon" size={16} />}
-                                        {theme === 'dark' ? (lang === 'zh' ? '浅色模式' : 'Light Mode') : (lang === 'zh' ? '深色模式' : 'Dark Mode')}
+                                        <span className="min-w-0 flex-1 truncate">
+                                            {theme === 'dark' ? (lang === 'zh' ? '浅色模式' : 'Light Mode') : (lang === 'zh' ? '深色模式' : 'Dark Mode')}
+                                        </span>
                                     </button>
-                                    <button onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} className="w-full text-left px-4 py-2.5 text-sm hover:bg-stone-100 dark:hover:bg-stone-700 text-stone-600 dark:text-stone-300 flex items-center gap-2">
+                                    <button onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-700">
                                         <IconLoader name="globe" size={16} />
-                                        {lang === 'zh' ? 'English' : '中文'}
+                                        <span className="min-w-0 flex-1 truncate">{lang === 'zh' ? 'English' : '中文'}</span>
                                     </button>
                                     <div className="h-px bg-stone-200 dark:bg-stone-700 my-1"></div>
-                                    <button onClick={() => { setShowApiKeyConfig(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2.5 text-sm hover:bg-stone-100 dark:hover:bg-stone-700 text-stone-600 dark:text-stone-300 flex items-center gap-2">
+                                    <button onClick={() => { setShowApiKeyConfig(true); setIsMenuOpen(false); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-700">
                                         <IconLoader name="settings" size={16} />
-                                        {lang === 'zh' ? 'API Key 设置' : 'API Key Settings'}
+                                        <span className="min-w-0 flex-1 truncate">
+                                            {lang === 'zh' ? 'API Key 设置' : 'API Key Settings'}
+                                        </span>
                                     </button>
                                 </div>
                             )}
