@@ -9,22 +9,12 @@ import {
   callGeminiTextAPI, callOpenAITextAPI,
   callGeminiImageAPI, callOpenAIImageAPI, callOpenAIChatImageAPI,
 } from '../services/aiService';
-import recommendedProxies from '../data/recommended-proxies.json';
 import { createId } from '../utils/id';
 
 interface Props {
   onConfigured?: () => void;
   onClose?: () => void;
   lang?: 'en' | 'zh';
-}
-
-interface ProxyRecommendation {
-  name: string;
-  name_zh: string;
-  description: string;
-  description_zh: string;
-  url: string;
-  supports: string[];
 }
 
 const officialApiGuides = [
@@ -126,7 +116,6 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
   const [imageAPIs, setImageAPIs] = useState<APIConfig[]>([]);
   const [testingId, setTestingId] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<{ id: string; ok: boolean; msg: string } | null>(null);
-  const [proxies, setProxies] = useState<ProxyRecommendation[]>([]);
 
   // Collapsed state
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
@@ -157,7 +146,6 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
     const settings = getAPISettings();
     setTextAPIs(settings.textAPIs.length > 0 ? settings.textAPIs : [defaultAPIConfig('gemini')]);
     setImageAPIs(settings.imageAPIs.length > 0 ? settings.imageAPIs : [defaultAPIConfig('gemini')]);
-    setProxies(Array.isArray(recommendedProxies) ? (recommendedProxies as any) : []);
   }, []);
 
   const save = () => {
@@ -768,7 +756,7 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
               </div>
             </div>
 
-            {/* Right: Official API guide + fallback proxies */}
+            {/* Right: Official API guide */}
             <div className="lg:col-span-1 flex flex-col lg:h-full lg:min-h-0 lg:overflow-hidden">
               <div data-api-guide className="space-y-4 pb-3 lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1 custom-scrollbar">
                 <div>
@@ -838,58 +826,6 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
                     </details>
                   ))}
                 </div>
-
-                {proxies.length > 0 && (
-                  <details className="rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900/50">
-                    <summary className="cursor-pointer select-none px-3 py-2 text-xs font-bold text-stone-700 dark:text-stone-200 hover:text-teal-700 dark:hover:text-teal-300 transition-colors">
-                      {isZh ? '备选：中转站（没有魔法时再看）' : 'Fallback: Proxies'}
-                    </summary>
-                    <div className="px-3 pb-3">
-                      <p className="text-[10px] text-amber-700 dark:text-amber-300 leading-relaxed p-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 mb-3">
-                        {isZh
-                          ? '免责声明：以上内容仅是作者使用过的，觉得还可以，但并不保证一直有效和稳定。'
-                          : 'Disclaimer: these are only services the author has used and found acceptable; they are not guaranteed to remain available or stable.'}
-                      </p>
-
-                      <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed mb-3">
-                        {isZh
-                          ? '如果无法直接连接官方 API，可以把中转站作为备选。使用前请自行确认价格、隐私、可用模型和服务条款。'
-                          : 'If you cannot connect to official APIs directly, use proxies only as a fallback. Check pricing, privacy, available models, and terms yourself before use.'}
-                      </p>
-
-                      <div className="space-y-2">
-                        {proxies.map((p: any, i: number) => (
-                          <a
-                            key={i}
-                            href={p.registerUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block p-3 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800/60 hover:border-teal-500/50 hover:bg-stone-100 dark:hover:bg-stone-800 transition-all"
-                          >
-                            <div className="flex items-center justify-between gap-2 mb-1">
-                              <span className="text-xs font-bold text-stone-700 dark:text-stone-200 truncate">{p.name}</span>
-                              <span className="text-[10px] text-teal-600 dark:text-teal-400 shrink-0">{isZh ? '获取 Key' : 'Get Key'}</span>
-                            </div>
-                            <p className="text-[10px] text-stone-500 dark:text-stone-400 leading-relaxed">{p.description}</p>
-                          </a>
-                        ))}
-                      </div>
-
-                      <div className="p-3 bg-white dark:bg-stone-800/60 rounded-xl border border-stone-200 dark:border-stone-700 mt-3">
-                        <p className="text-[11px] font-semibold text-stone-600 dark:text-stone-300 mb-2">
-                          {isZh ? '中转站使用指南' : 'How to use a proxy'}
-                        </p>
-                        <ol className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed space-y-1 list-decimal list-inside">
-                          <li>{isZh ? '点击上方卡片，前往站点注册' : 'Click a card above to register'}</li>
-                          <li>{isZh ? '找到「令牌管理」，创建 API Key' : 'Find "Token Management" and create a token'}</li>
-                          <li>{isZh ? '找到「充值入口」，充值余额' : 'Find the top-up page and add balance'}</li>
-                          <li>{isZh ? '在「模型广场」查看可用模型和端点' : 'Check "Model Hub" for models and endpoint URL'}</li>
-                          <li>{isZh ? '将端点、模型名和 Key 填入左侧配置框' : 'Enter endpoint, model, and Key on the left'}</li>
-                        </ol>
-                      </div>
-                    </div>
-                  </details>
-                )}
               </div>
             </div>
           </div>

@@ -165,6 +165,7 @@ async function assertApiModalUsesPageScroll(page) {
         scrollHeight: Math.round(guide.scrollHeight),
       } : null,
       lists,
+      text: document.body.textContent || '',
     };
   });
 
@@ -179,6 +180,11 @@ async function assertApiModalUsesPageScroll(page) {
   assert(
     !state.guide || state.guide.overflowY === 'visible',
     'mobile API modal: guide panel should expand instead of becoming a nested scroller',
+    state,
+  );
+  assert(
+    !/备选：中转站|Fallback: Proxies|中转站使用指南/.test(state.text),
+    'mobile API modal: fallback proxy recommendation section should be removed',
     state,
   );
 }
