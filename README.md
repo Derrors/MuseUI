@@ -2,8 +2,6 @@
 
 [简体中文](./README.zh-CN.md)
 
-[![GuanTou Lab](https://world.guantou.site/badge.svg?theme=dark&accent=red&lang=en&size=sm)](https://world.guantou.site/)
-
 MuseUI is a browser-only AI interface and image design generator. It helps you create UI mockups, social images, covers, infographics, stickers, logos, and other visual drafts from prompts and reference images.
 
 The app is a static Vite + React SPA. It has no backend, no authentication, and no server database. Users provide their own AI API keys in the browser settings, and those keys are stored locally in the browser.
