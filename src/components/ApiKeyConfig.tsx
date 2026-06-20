@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   getAPISettings,
-  DEFAULT_IMAGE_MODEL,
-  DEFAULT_TEXT_MODEL,
   IMAGE_MODEL_PRESETS,
   saveAPISettings,
   TEXT_MODEL_PRESETS,
@@ -15,7 +13,10 @@ import {
 } from '../services/aiService';
 import { buildOpenAICompatibleRequestUrl, buildOpenAICompatibleUrl, normalizeOpenAIBaseUrl } from '../services/apiUrl';
 import { APIConfig, OpenAIImageMode } from '../types';
-import { createId } from '../utils/id';
+import {
+  createDefaultAPIProfile,
+  normalizeAPIProfileForUI,
+} from '../domain/api-settings/profileModel';
 
 interface Props {
   onConfigured?: () => void;
@@ -56,28 +57,6 @@ const officialApiGuides = [
   },
 ];
 
-const defaultAPIConfig = (): APIConfig => ({
-  id: createId('api'),
-  name: '',
-  provider: 'openai',
-  baseUrl: 'https://api.openai.com/v1',
-  apiKey: '',
-  textModel: DEFAULT_TEXT_MODEL,
-  imageModel: DEFAULT_IMAGE_MODEL,
-  enabled: true,
-  textEnabled: true,
-  imageEnabled: true,
-  imageMode: 'auto',
-});
-
-const normalizeProfileForUI = (api: APIConfig): APIConfig => ({
-  ...api,
-  name: api.name || '',
-  textEnabled: api.textEnabled ?? true,
-  imageEnabled: api.imageEnabled ?? true,
-  imageMode: api.imageMode || 'auto',
-});
-
 const PINNED_TEXT_MODELS = [
   'gpt-5.4',
   'gpt-5.5',
@@ -107,8 +86,8 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
   useEffect(() => {
     const settings = getAPISettings();
     setProfiles(settings.profiles.length > 0
-      ? settings.profiles.map(normalizeProfileForUI)
-      : [defaultAPIConfig()]);
+      ? settings.profiles.map(normalizeAPIProfileForUI)
+      : [createDefaultAPIProfile()]);
   }, []);
 
   const persist = () => {
@@ -130,7 +109,7 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
   };
 
   const handleAdd = () => {
-    setProfiles(prev => [...prev, defaultAPIConfig()]);
+    setProfiles(prev => [...prev, createDefaultAPIProfile()]);
   };
 
   const handleRemove = (id: string) => {
@@ -144,7 +123,7 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
     if (trimmed.apiKey !== undefined) trimmed.apiKey = trimmed.apiKey.trim().replace(/\s+/g, '');
     if (trimmed.textModel !== undefined) trimmed.textModel = trimmed.textModel.trim().replace(/\s+/g, '');
     if (trimmed.imageModel !== undefined) trimmed.imageModel = trimmed.imageModel.trim().replace(/\s+/g, '');
-    setProfiles(prev => prev.map(api => api.id === id ? normalizeProfileForUI({ ...api, ...trimmed }) : api));
+    setProfiles(prev => prev.map(api => api.id === id ? normalizeAPIProfileForUI({ ...api, ...trimmed }) : api));
   };
 
   const handleTest = async (kind: 'text' | 'image', api: APIConfig) => {

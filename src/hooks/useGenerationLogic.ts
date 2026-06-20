@@ -1,59 +1,18 @@
 import { useState } from 'react';
-import { GeneratedImage, GenerationConfig, LayoutElement, DesignSystem } from '../types';
+import { GeneratedImage, DesignSystem } from '../types';
 import { extractStyleFromImages, generatePageList, constructPrompt, generateDesignSpecJson, generateUIReference, analyzeLayoutImage, optimizeDescription } from '../services/aiGenerationService';
-import { DEFAULT_IMAGE_MODEL, getEnabledImageAPIs } from '../services/apiKeyStore';
 import { LangType } from '../types';
-import type { SkillConstants } from '../skills/promptBuilders';
-
-const getAspectRatio = (width: number, height: number): string => {
-    const ratio = width / height;
-    if (ratio >= 1.7) return '16:9';
-    if (ratio >= 1.3) return '4:3';
-    if (ratio >= 0.9) return '1:1';
-    if (ratio >= 0.7) return '3:4';
-    return '9:16';
-};
-
-// Interfaces for dependencies to ensure type safety
-interface ConfigState {
-    platform: any; resolution: any; customSize: any; style: any; description: string; pageName: string; keywords: any;
-    enableDesignTokens: boolean; designTokens: any; background: any; highQuality: boolean; forceChinese: boolean;
-    promptLanguage: string | null; preferredImageApiId: string | null;
-    batchOutputMode: any; specMode: any; pages: any[]; colorImage: File | null; referenceImages: string[]; isBatchMode: boolean;
-    designMdContent: string | null;
-    visualStyleContent: string | null;
-    layoutDensityContent: string | null;
-    activeRole?: string;
-    mediaAspectRatio?: string;
-    mediaResolution?: { id: string; name: string; width: number; height: number; ratio: string };
-    mediaType?: string;
-    skillMode?: boolean;
-    activeSkill?: string | null;
-    skillConfig?: any;
-    setDescription: (s: string) => void;
-    setPages: (p: any[]) => void;
-    setCustomStyles: (cb: (prev: any[]) => any[]) => void;
-    setStyle: (s: any) => void;
-    setIsAutoGeneratingPages: (b: boolean) => void;
-}
-
-interface CanvasState {
-    layoutImage: string | null;
-    layoutElements: LayoutElement[];
-    layoutAnalysis: string | null;
-    setLayoutAnalysis: (s: string | null) => void;
-    setArtboards: (cb: (prev: any[]) => any[]) => void;
-    setArtboardGroups: (cb: (prev: any[]) => any[]) => void;
-    handleSaveToHistory: (img: GeneratedImage) => Promise<void>;
-    getImageDimensions: (b: string) => Promise<{ width: number, height: number }>;
-    artboardGroups: any[];
-    artboards: any[]; // Added for regen finding
-}
+import { addBatchArtboard, addGeneratedArtboard, replaceRegeneratedArtboard, updateBatchGroupBounds } from '../domain/canvas/artboardTransforms';
+import { createGenerationConfig, getEffectiveResolution } from '../domain/generation/config';
+import { buildDevReviewData } from '../domain/generation/devReview';
+import { createGeneratedImage } from '../domain/generation/images';
+import { loadSkillPrompting, resolveSkillResolution } from '../domain/generation/skillPrompting';
+import type { GenerationCanvasState, GenerationConfigState, GenerationReviewData, RegenState } from '../domain/generation/types';
 
 export const useGenerationLogic = (
     lang: LangType,
-    config: ConfigState,
-    canvas: CanvasState
+    config: GenerationConfigState,
+    canvas: GenerationCanvasState
 ) => {
     // State
     const [isGenerating, setIsGenerating] = useState(false);
@@ -69,49 +28,15 @@ export const useGenerationLogic = (
     const [specReviewImage, setSpecReviewImage] = useState<GeneratedImage | null>(null);
     const [specFeedback, setSpecFeedback] = useState('');
     const [batchConfirmation, setBatchConfirmation] = useState<{ resolve: (p: string | null) => void, prompt: string, pageName: string, index: number, total: number } | null>(null);
-    const [reviewData, setReviewData] = useState<{
-        prompt: string;
-        config: GenerationConfig;
-        pendingAction: () => void;
-        images: { label: string, url: string }[];
-        layoutAnalysis?: string | null;
-        apiRequestInfo?: {
-            targetAPI: {
-                provider: string;
-                baseUrl: string;
-                model: string;
-                name: string;
-            };
-            requestParams: {
-                prompt: string;
-                aspectRatio: string;
-                preferredApiId?: string | null;
-                images: {
-                    hasColorImage: boolean;
-                    hasStyleImage: boolean;
-                    hasLayoutImage: boolean;
-                    hasEditImage: boolean;
-                    hasMaskImage: boolean;
-                    contentImageCount: number;
-                };
-            };
-        };
-    } | null>(null);
+    const [reviewData, setReviewData] = useState<GenerationReviewData | null>(null);
     const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
     const [inspectImage, setInspectImage] = useState<GeneratedImage | null>(null);
 
-    const [regenState, setRegenState] = useState<{
-        isOpen: boolean; artboardId: string | null; targetImage: string | null; mode: 'refine' | 'new';
-        prompt: string; referenceImage: string | null; layoutImage: string | null; layoutElements: LayoutElement[]; maskImage: string | null;
-    }>({
+    const [regenState, setRegenState] = useState<RegenState>({
         isOpen: false, artboardId: null, targetImage: null, mode: 'refine', prompt: '', referenceImage: null, layoutImage: null, layoutElements: [], maskImage: null
     });
 
-    const isMediaMode = config.activeRole === 'media';
-    const effectiveResolution = isMediaMode && config.mediaResolution
-        ? { id: config.mediaResolution.id, name: config.mediaResolution.name, width: config.mediaResolution.width, height: config.mediaResolution.height, type: config.platform as any }
-        : config.resolution;
-    const mediaFields = { activeRole: config.activeRole as any, mediaAspectRatio: config.mediaAspectRatio as any, mediaType: config.mediaType as any };
+    const effectiveResolution = getEffectiveResolution(config);
 
     // Actions
     const handleExtractStyle = async (files: File[]) => {
@@ -168,18 +93,7 @@ export const useGenerationLogic = (
         setIsGenerating(true); setProgressValue(20); setError(null); setReviewData(null);
 
         const layoutImageToUse = ignoreLayoutImage ? null : canvas.layoutImage;
-        const genConfig: GenerationConfig = {
-            platform: config.platform, resolution: effectiveResolution, customSize: config.customSize,
-            style: config.style, description: config.description, pageName: config.pageName || 'Screen',
-            keywords: config.keywords, highQuality: config.highQuality, enableDesignTokens: config.enableDesignTokens,
-            designTokens: config.designTokens, background: config.background, forceChinese: config.forceChinese,
-            promptLanguage: config.promptLanguage, preferredImageApiId: config.preferredImageApiId,
-            batchOutputMode: config.batchOutputMode, specMode: config.specMode,
-            designMd: config.designMdContent || undefined,
-            visualStyle: config.visualStyleContent || undefined,
-            layoutDensity: config.layoutDensityContent || undefined,
-            ...mediaFields
-        };
+        const genConfig = createGenerationConfig(config, { pageName: config.pageName || 'Screen' });
 
         const batchId = `single-${Date.now()}`;
         const promptToUse = overridePrompt || constructPrompt(genConfig, false, !!layoutImageToUse);
@@ -195,22 +109,15 @@ export const useGenerationLogic = (
             });
 
             const dims = await canvas.getImageDimensions(asset.base64);
-            const newImage: GeneratedImage = {
-                id: asset.id, url: asset.url, prompt: asset.prompt, timestamp: asset.timestamp,
-                details: {
-                    platform: config.platform, resolution: `${dims.width}x${dims.height}`, style: config.style.name,
-                    tokens: config.designTokens, fullPrompt: asset.prompt, batchId: batchId, originalDescription: config.description,
-                    projectId: projectId || undefined
-                }
-            };
+            const newImage = createGeneratedImage(asset, dims, genConfig, {
+                batchId,
+                originalDescription: config.description,
+                projectId,
+            });
 
             await canvas.handleSaveToHistory(newImage);
 
-            canvas.setArtboards(prev => {
-                const x = 50 + (prev.length * 50);
-                const y = 50 + (prev.length * 50);
-                return [...prev, { id: newImage.id, x, y, width: dims.width, height: dims.height, image: newImage, history: [newImage], label: config.pageName || 'UI', groupId: undefined, isNew: true }];
-            });
+            canvas.setArtboards(prev => addGeneratedArtboard(prev, newImage, dims, config.pageName || 'UI'));
 
             setProgressValue(100);
         } catch (err: any) {
@@ -224,17 +131,10 @@ export const useGenerationLogic = (
         setBatchProgress(lang === 'zh' ? '正在生成设计规范...' : 'Generating Design Spec...');
 
         try {
-            const genConfig: GenerationConfig = {
-                platform: config.platform, resolution: effectiveResolution, customSize: config.customSize,
-                style: config.style, description: config.description, pageName: 'Design System',
-                keywords: config.keywords, highQuality: config.highQuality, enableDesignTokens: config.enableDesignTokens,
-                designTokens: config.designTokens, background: config.background, forceChinese: config.forceChinese,
-                promptLanguage: config.promptLanguage, preferredImageApiId: config.preferredImageApiId,
-                batchOutputMode: config.batchOutputMode, specMode: config.specMode,
-                    designMd: config.designMdContent || undefined,
-                visualStyle: config.visualStyleContent || undefined,
-                ...mediaFields
-            };
+            const genConfig = createGenerationConfig(config, {
+                pageName: 'Design System',
+                layoutDensity: undefined,
+            });
 
             if (config.specMode === 'code') {
                 const designSystem = await generateDesignSpecJson(genConfig, feedback || undefined);
@@ -295,17 +195,12 @@ export const useGenerationLogic = (
                 const page = config.pages[i];
                 setBatchProgress(`${lang === 'zh' ? '正在生成' : 'Generating'} ${i + 1}/${total}: ${page.name}`);
 
-                const pageConfig: GenerationConfig = {
-                    platform: config.platform, resolution: effectiveResolution, customSize: config.customSize, style: config.style,
+                const pageConfig = createGenerationConfig(config, {
+                    resolution: effectiveResolution,
                     description: `${config.description}\n\nSpecific Page: ${page.name} - ${page.description}`,
-                    pageName: page.name, keywords: [], highQuality: config.highQuality, enableDesignTokens: config.enableDesignTokens,
-                    designTokens: config.designTokens, background: config.background, forceChinese: config.forceChinese,
-                    promptLanguage: config.promptLanguage, preferredImageApiId: config.preferredImageApiId,
-                    batchOutputMode: config.batchOutputMode, specMode: config.specMode,
-                            designMd: config.designMdContent || undefined,
-                    visualStyle: config.visualStyleContent || undefined,
-                    ...mediaFields
-                };
+                    pageName: page.name,
+                    keywords: [],
+                });
 
                 // Prepare Spec Context
                 let designSystemContext: DesignSystem | undefined = undefined;
@@ -328,19 +223,20 @@ export const useGenerationLogic = (
                 });
 
                 const dims = await canvas.getImageDimensions(asset.base64);
-                const newImage: GeneratedImage = {
-                    id: asset.id, url: asset.url, prompt: page.name, timestamp: asset.timestamp,
-                    details: { ...pageConfig as any, resolution: `${dims.width}x${dims.height}`, batchId, originalDescription: pageConfig.description, projectId: currentProjectId || undefined }
-                };
+                const newImage = createGeneratedImage(asset, dims, pageConfig, {
+                    prompt: page.name,
+                    batchId,
+                    originalDescription: pageConfig.description,
+                    projectId: currentProjectId,
+                    details: pageConfig as any,
+                });
 
                 // Add to canvas immediately
-                canvas.setArtboards(prev => [...prev, {
-                    id: newImage.id, x: localX, y: groupY + 60, width: dims.width, height: dims.height, image: newImage, label: page.name, groupId: batchId, history: [newImage], isNew: true
-                }]);
+                canvas.setArtboards(prev => addBatchArtboard(prev, newImage, dims, page.name, batchId, localX, groupY + 60));
 
                 // Update group width/height
                 const currentWidth = (localX - groupX) + dims.width;
-                canvas.setArtboardGroups(prev => prev.map(g => g.id === batchId ? { ...g, width: currentWidth, height: Math.max(g.height, dims.height) } : g));
+                canvas.setArtboardGroups(prev => updateBatchGroupBounds(prev, batchId, currentWidth, dims.height));
 
                 localX += dims.width + 50;
                 completed++;
@@ -350,125 +246,27 @@ export const useGenerationLogic = (
         finally { setIsGenerating(false); setBatchProgress(''); setProgressValue(0); }
     };
 
-    // --- Skill Constants Aggregator ---
-    const loadSkillPrompting = async () => {
-        const [
-            promptBuilders,
-            CoverConstants,
-            InfographicConstants,
-            XHSConstants,
-            ComicConstants,
-            ArticleConstants,
-            SlideConstants,
-            LogoConstants,
-            StickerConstants,
-        ] = await Promise.all([
-            import('../skills/promptBuilders'),
-            import('../skills/cover-image/constants'),
-            import('../skills/infographic/constants'),
-            import('../skills/xhs-images/constants'),
-            import('../skills/comic/constants'),
-            import('../skills/article-illustrator/constants'),
-            import('../skills/slide-deck/constants'),
-            import('../skills/logo/constants'),
-            import('../skills/sticker-design/constants'),
-        ]);
-
-        const constants: SkillConstants = {
-            coverImage: {
-                types: CoverConstants.COVER_TYPES,
-                palettes: CoverConstants.COVER_PALETTES,
-                renderings: CoverConstants.COVER_RENDERINGS,
-                texts: CoverConstants.COVER_TEXTS,
-                moods: CoverConstants.COVER_MOODS,
-                fonts: CoverConstants.COVER_FONTS,
-            },
-            infographic: {
-                layouts: InfographicConstants.INFOGRAPHIC_LAYOUTS,
-                styles: InfographicConstants.INFOGRAPHIC_STYLES,
-            },
-            xhsImages: {
-                styles: XHSConstants.XHS_STYLES,
-                layouts: XHSConstants.XHS_LAYOUTS,
-                strategies: XHSConstants.XHS_STRATEGIES,
-            },
-            comic: {
-                artStyles: ComicConstants.COMIC_ART_STYLES,
-                tones: ComicConstants.COMIC_TONES,
-                layouts: ComicConstants.COMIC_LAYOUTS,
-                presets: ComicConstants.COMIC_PRESETS,
-            },
-            articleIllustrator: {
-                types: ArticleConstants.ARTICLE_TYPES,
-                styles: ArticleConstants.ARTICLE_STYLES,
-                densities: ArticleConstants.ARTICLE_DENSITIES,
-            },
-            slideDeck: {
-                presets: SlideConstants.SLIDE_PRESETS,
-                audiences: SlideConstants.SLIDE_AUDIENCES,
-            },
-            logo: {
-                types: LogoConstants.LOGO_TYPES,
-                styles: LogoConstants.LOGO_STYLES,
-                palettes: LogoConstants.LOGO_PALETTES,
-                industries: LogoConstants.LOGO_INDUSTRIES,
-                moods: LogoConstants.LOGO_MOODS,
-            },
-            stickerDesign: {
-                styles: StickerConstants.STICKER_STYLES,
-                shapes: StickerConstants.STICKER_SHAPES,
-                themes: StickerConstants.STICKER_THEMES,
-                sizes: StickerConstants.STICKER_SIZES,
-                backgrounds: StickerConstants.STICKER_BACKGROUNDS,
-            },
-        };
-
-        return { buildSkillPrompt: promptBuilders.buildSkillPrompt, constants };
-    };
-
     // --- Skill Mode: Single Image Generation ---
     const handleSkillSingleGeneration = async (skillType: string, skillConfig: any, currentProjectId: string | null) => {
         setIsGenerating(true); setProgressValue(20); setError(null);
 
-        // Resolve skill-specific resolution override
-        let skillResolution = effectiveResolution;
-        if (skillType === 'logo' && skillConfig.logo?.size) {
-            const logoSizeMap: Record<string, { width: number; height: number }> = {
-                '1:1': { width: 500, height: 500 },
-                '4:3': { width: 600, height: 450 },
-                '16:9': { width: 800, height: 450 },
-                '3:4': { width: 450, height: 600 },
-                '2:1': { width: 800, height: 400 },
-            };
-            const dims = logoSizeMap[skillConfig.logo.size] || logoSizeMap['1:1'];
-            skillResolution = { id: `logo-${skillConfig.logo.size}`, name: `Logo ${skillConfig.logo.size}`, width: dims.width, height: dims.height, type: config.platform as any };
-        } else if (skillType === 'sticker-design' && skillConfig.stickerDesign?.aspect) {
-            const stickerSizeMap: Record<string, { width: number; height: number }> = {
-                '1:1': { width: 512, height: 512 },
-                '3:4': { width: 450, height: 600 },
-                '4:3': { width: 600, height: 450 },
-                '9:16': { width: 450, height: 800 },
-                '16:9': { width: 800, height: 450 },
-            };
-            const dims = stickerSizeMap[skillConfig.stickerDesign.aspect] || stickerSizeMap['1:1'];
-            skillResolution = { id: `sticker-${skillConfig.stickerDesign.aspect}`, name: `Sticker ${skillConfig.stickerDesign.aspect}`, width: dims.width, height: dims.height, type: config.platform as any };
-        }
+        const skillResolution = resolveSkillResolution(config, skillType, skillConfig);
 
         try {
             const { buildSkillPrompt, constants } = await loadSkillPrompting();
             const prompt = buildSkillPrompt(skillType as any, config.description, skillConfig, constants);
             const promptStr = typeof prompt === 'string' ? prompt : prompt.prompt;
 
-            const genConfig: GenerationConfig = {
-                platform: config.platform, resolution: skillResolution, customSize: { width: skillResolution.width, height: skillResolution.height, active: true },
-                style: config.style, description: config.description, pageName: config.pageName || 'Skill Output',
-                keywords: config.keywords, highQuality: config.highQuality, enableDesignTokens: false,
-                designTokens: config.designTokens, background: config.background, forceChinese: config.forceChinese,
-                promptLanguage: config.promptLanguage, preferredImageApiId: config.preferredImageApiId,
-                batchOutputMode: 'separate', specMode: 'image',
-                    skillMode: true, skillConfig,
-                ...mediaFields
-            };
+            const genConfig = createGenerationConfig(config, {
+                resolution: skillResolution,
+                customSize: { width: skillResolution.width, height: skillResolution.height, active: true },
+                pageName: config.pageName || 'Skill Output',
+                enableDesignTokens: false,
+                batchOutputMode: 'separate',
+                specMode: 'image',
+                skillMode: true,
+                skillConfig,
+            });
 
             const asset = await generateUIReference({
                 prompt: promptStr,
@@ -479,21 +277,14 @@ export const useGenerationLogic = (
             });
 
             const dims = await canvas.getImageDimensions(asset.base64);
-            const newImage: GeneratedImage = {
-                id: asset.id, url: asset.url, prompt: asset.prompt, timestamp: asset.timestamp,
-                details: {
-                    platform: config.platform, resolution: `${dims.width}x${dims.height}`, style: config.style.name,
-                    tokens: config.designTokens, fullPrompt: asset.prompt, batchId: `skill-${skillType}-${Date.now()}`,
-                    originalDescription: config.description, projectId: currentProjectId || undefined
-                }
-            };
+            const newImage = createGeneratedImage(asset, dims, genConfig, {
+                batchId: `skill-${skillType}-${Date.now()}`,
+                originalDescription: config.description,
+                projectId: currentProjectId,
+            });
 
             await canvas.handleSaveToHistory(newImage);
-            canvas.setArtboards(prev => {
-                const x = 50 + (prev.length * 50);
-                const y = 50 + (prev.length * 50);
-                return [...prev, { id: newImage.id, x, y, width: dims.width, height: dims.height, image: newImage, history: [newImage], label: skillType, groupId: undefined }];
-            });
+            canvas.setArtboards(prev => addGeneratedArtboard(prev, newImage, dims, skillType));
 
             setProgressValue(100);
         } catch (err: any) {
@@ -540,16 +331,16 @@ export const useGenerationLogic = (
                 });
                 const promptStr = typeof promptResult === 'string' ? promptResult : promptResult.prompt;
 
-                const genConfig: GenerationConfig = {
-                    platform: config.platform, resolution: effectiveResolution, customSize: config.customSize,
-                    style: config.style, description: pageContent, pageName,
-                    keywords: config.keywords, highQuality: config.highQuality, enableDesignTokens: false,
-                    designTokens: config.designTokens, background: config.background, forceChinese: config.forceChinese,
-                    promptLanguage: config.promptLanguage, preferredImageApiId: config.preferredImageApiId,
-                    batchOutputMode: 'separate', specMode: 'image',
-                            skillMode: true, skillConfig,
-                    ...mediaFields
-                };
+                const genConfig = createGenerationConfig(config, {
+                    resolution: effectiveResolution,
+                    description: pageContent,
+                    pageName,
+                    enableDesignTokens: false,
+                    batchOutputMode: 'separate',
+                    specMode: 'image',
+                    skillMode: true,
+                    skillConfig,
+                });
 
                 const asset = await generateUIReference({
                     prompt: promptStr,
@@ -560,23 +351,17 @@ export const useGenerationLogic = (
                 });
 
                 const dims = await canvas.getImageDimensions(asset.base64);
-                const newImage: GeneratedImage = {
-                    id: asset.id, url: asset.url, prompt: asset.prompt, timestamp: asset.timestamp,
-                    details: {
-                        platform: config.platform, resolution: `${dims.width}x${dims.height}`, style: config.style.name,
-                        tokens: config.designTokens, fullPrompt: asset.prompt, batchId,
-                        originalDescription: pageContent, projectId: currentProjectId || undefined
-                    }
-                };
+                const newImage = createGeneratedImage(asset, dims, genConfig, {
+                    batchId,
+                    originalDescription: pageContent,
+                    projectId: currentProjectId,
+                });
 
                 await canvas.handleSaveToHistory(newImage);
-                canvas.setArtboards(prev => [...prev, {
-                    id: newImage.id, x: localX, y: groupY + 60, width: dims.width, height: dims.height,
-                    image: newImage, label: pageName, groupId: batchId, history: [newImage], isNew: true
-                }]);
+                canvas.setArtboards(prev => addBatchArtboard(prev, newImage, dims, pageName, batchId, localX, groupY + 60));
 
                 const currentWidth = (localX - groupX) + dims.width;
-                canvas.setArtboardGroups(prev => prev.map(g => g.id === batchId ? { ...g, width: currentWidth, height: Math.max(g.height, dims.height) } : g));
+                canvas.setArtboardGroups(prev => updateBatchGroupBounds(prev, batchId, currentWidth, dims.height));
 
                 localX += dims.width + 50;
                 refImage = asset.url; // Use previous image as reference for next
@@ -614,44 +399,7 @@ export const useGenerationLogic = (
             layoutDensity: config.layoutDensityContent || undefined,
         } as any, false, !!canvas.layoutImage);
         if (devMode) {
-            const enabledImageAPIs = getEnabledImageAPIs();
-            let targetAPI = enabledImageAPIs[0];
-            if (config.preferredImageApiId) {
-                const preferred = enabledImageAPIs.find(a => a.id === config.preferredImageApiId);
-                if (preferred) targetAPI = preferred;
-            }
-
-            const width = config.customSize.active ? config.customSize.width : config.resolution.width;
-            const height = config.customSize.active ? config.customSize.height : config.resolution.height;
-            const aspectRatio = getAspectRatio(width, height);
-
-            setReviewData({
-                prompt: constructed,
-                config: config as any,
-                pendingAction: () => handleConfirmGeneration(constructed, false, currentProjectId),
-                images: [],
-                apiRequestInfo: targetAPI ? {
-                    targetAPI: {
-                        provider: targetAPI.provider,
-                        baseUrl: targetAPI.baseUrl,
-                        model: targetAPI.imageModel || DEFAULT_IMAGE_MODEL,
-                        name: targetAPI.name,
-                    },
-                    requestParams: {
-                        prompt: constructed,
-                        aspectRatio,
-                        preferredApiId: config.preferredImageApiId,
-                        images: {
-                            hasColorImage: !!config.colorImage,
-                            hasStyleImage: !!config.referenceImages[0],
-                            hasLayoutImage: !!canvas.layoutImage,
-                            hasEditImage: false,
-                            hasMaskImage: false,
-                            contentImageCount: 0,
-                        },
-                    },
-                } : undefined,
-            });
+            setReviewData(buildDevReviewData(config, canvas, currentProjectId, handleConfirmGeneration));
         } else {
             handleConfirmGeneration(constructed, false, currentProjectId);
         }
@@ -664,18 +412,13 @@ export const useGenerationLogic = (
         setIsGenerating(true); setRegeneratingId(id); setError(null);
         const oldDetails = targetBoard.image.details;
 
-        const genConfig: GenerationConfig = {
-            platform: config.platform, resolution: effectiveResolution, customSize: config.customSize, style: config.style,
+        const genConfig = createGenerationConfig(config, {
+            resolution: effectiveResolution,
             description: oldDetails?.originalDescription || config.description,
-            pageName: targetBoard.label, keywords: config.keywords, highQuality: config.highQuality, enableDesignTokens: config.enableDesignTokens,
-            designTokens: config.designTokens, background: config.background, forceChinese: config.forceChinese,
-            promptLanguage: config.promptLanguage, preferredImageApiId: config.preferredImageApiId,
-            batchOutputMode: 'separate', specMode: 'image',
-            designMd: config.designMdContent || undefined,
-            visualStyle: config.visualStyleContent || undefined,
-            layoutDensity: config.layoutDensityContent || undefined,
-            ...mediaFields,
-        };
+            pageName: targetBoard.label,
+            batchOutputMode: 'separate',
+            specMode: 'image',
+        });
 
         let finalPrompt = '';
         if (!prompt.trim()) { finalPrompt = constructPrompt(genConfig, !!ref, !!layout); }
@@ -695,17 +438,22 @@ export const useGenerationLogic = (
 
             const dims = await canvas.getImageDimensions(asset.base64);
             const newImage: GeneratedImage = {
-                id: asset.id, url: asset.url, prompt: asset.prompt, timestamp: asset.timestamp,
-                details: { ...oldDetails, fullPrompt: finalPrompt, resolution: `${dims.width}x${dims.height}`, batchId: oldDetails?.batchId || 'regen' }
+                id: asset.id,
+                url: asset.url,
+                prompt: asset.prompt,
+                timestamp: asset.timestamp,
+                details: {
+                    ...oldDetails,
+                    platform: config.platform,
+                    style: config.style.name,
+                    tokens: config.designTokens,
+                    fullPrompt: finalPrompt,
+                    resolution: `${dims.width}x${dims.height}`,
+                    batchId: oldDetails?.batchId || 'regen'
+                }
             };
 
-            canvas.setArtboards(prev => prev.map(b => {
-                if (b.id === id) {
-                    const newHistory = [...(b.history || (b.image ? [b.image] : [])), newImage];
-                    return { ...b, image: newImage, history: newHistory, width: dims.width, height: dims.height, isNew: true };
-                }
-                return b;
-            }));
+            canvas.setArtboards(prev => replaceRegeneratedArtboard(prev, id, newImage, dims));
         } catch (err: any) { setError(err.message || 'Regeneration failed'); }
         finally { setIsGenerating(false); setRegeneratingId(null); }
     };
