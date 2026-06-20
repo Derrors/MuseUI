@@ -3,6 +3,7 @@ import {
   ComicConfig, ArticleIllustratorConfig, SlideDeckConfig,
   LogoConfig, StickerDesignConfig, SkillType
 } from '../types';
+import { buildStickerCraftPrompt } from '../domain/stickers/prompting';
 
 // Placeholder imports - will be resolved once constants are migrated
 // import { COVER_TYPES, COVER_PALETTES, COVER_RENDERINGS, COVER_TEXTS, COVER_MOODS, COVER_FONTS } from './cover-image/constants';
@@ -367,58 +368,7 @@ export function buildStickerDesignPrompt(
     backgrounds: any[];
   }
 ): string {
-  const styleMod = getModifier(constants.styles, config.style);
-  const shapeMod = getModifier(constants.shapes, config.shape);
-  const themeMod = getModifier(constants.themes, config.theme);
-  const sizeMod = getModifier(constants.sizes, config.size);
-  const bgMod = getModifier(constants.backgrounds, config.background);
-
-  const isSheet = config.size === 'sheet';
-
-  return `
-Create a ${isSheet ? 'sticker sheet with multiple stickers' : 'single sticker design'}.
-
-STYLE: ${config.style}
-${styleMod}
-
-SHAPE: ${config.shape}
-${shapeMod}
-
-THEME: ${config.theme}
-${themeMod}
-
-SIZE: ${config.size}
-${sizeMod}
-
-BACKGROUND: ${config.background}
-${bgMod}
-
-${isSheet ? `
-STICKER SHEET REQUIREMENTS:
-- Include 6-12 individual stickers with consistent art style
-- Vary poses, expressions, or items for visual interest
-- Arrange stickers aesthetically with proper spacing
-- Include subtle cut lines or separation marks between stickers
-- All stickers should feel like a cohesive collection/set
-` : `
-SINGLE STICKER REQUIREMENTS:
-- Design should be self-contained and visually complete
-- Clear focal point with readable details at intended size
-- Professional print-ready quality
-`}
-
-TECHNICAL SPECIFICATIONS:
-- High resolution, print-ready quality (300 DPI equivalent)
-- Clean edges suitable for die-cutting
-- Colors should be vibrant and well-separated
-- No photographic realistic humans — stylized/illustrated only
-
-SUBJECT / CONTENT:
-${content}
-
-${config.subjectName ? `SUBJECT NAME: "${config.subjectName}"` : ''}
-${config.expression ? `EXPRESSION/MOOD: ${config.expression}` : ''}
-  `.trim();
+  return buildStickerCraftPrompt(content, config, constants);
 }
 
 // ============================================================

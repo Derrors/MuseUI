@@ -7,7 +7,14 @@ import { createGenerationConfig, getEffectiveResolution } from '../domain/genera
 import { buildDevReviewData } from '../domain/generation/devReview';
 import { createGeneratedImage } from '../domain/generation/images';
 import { loadSkillPrompting, resolveSkillResolution } from '../domain/generation/skillPrompting';
+import {
+    createStickerMetadata,
+    getStickerBackgroundStrategy,
+    normalizeStickerConfig,
+    repairStickerTransparency,
+} from '../domain/stickers';
 import type { GenerationCanvasState, GenerationConfigState, GenerationReviewData, RegenState } from '../domain/generation/types';
+import type { StickerDesignConfig } from '../types';
 
 export const useGenerationLogic = (
     lang: LangType,
@@ -37,6 +44,46 @@ export const useGenerationLogic = (
     });
 
     const effectiveResolution = getEffectiveResolution(config);
+
+    const applyStickerWorkflow = async (
+        skillType: string,
+        skillConfig: any,
+        asset: any,
+    ): Promise<{ asset: any; stickerDetails?: ReturnType<typeof createStickerMetadata> }> => {
+        if (skillType !== 'sticker-design' || !skillConfig?.stickerDesign) {
+            return { asset };
+        }
+
+        const stickerConfig = normalizeStickerConfig(skillConfig.stickerDesign as StickerDesignConfig);
+        const strategy = getStickerBackgroundStrategy(stickerConfig);
+        let processedAsset = asset;
+        let backgroundRemoved = false;
+        let processingError: string | undefined;
+
+        if (strategy.transparentWorkflow) {
+            try {
+                const repaired = await repairStickerTransparency(asset.base64 || asset.url, {
+                    backgroundColor: strategy.promptBackgroundColor,
+                });
+                processedAsset = {
+                    ...asset,
+                    url: repaired.url,
+                    base64: repaired.url,
+                };
+                backgroundRemoved = repaired.backgroundRemoved;
+            } catch (err: any) {
+                processingError = err?.message || String(err);
+            }
+        }
+
+        return {
+            asset: processedAsset,
+            stickerDetails: createStickerMetadata(stickerConfig, {
+                backgroundRemoved,
+                error: processingError,
+            }),
+        };
+    };
 
     // Actions
     const handleExtractStyle = async (files: File[]) => {
@@ -256,6 +303,9 @@ export const useGenerationLogic = (
             const { buildSkillPrompt, constants } = await loadSkillPrompting();
             const prompt = buildSkillPrompt(skillType as any, config.description, skillConfig, constants);
             const promptStr = typeof prompt === 'string' ? prompt : prompt.prompt;
+            const stickerConfig = skillType === 'sticker-design' && skillConfig.stickerDesign
+                ? normalizeStickerConfig(skillConfig.stickerDesign as StickerDesignConfig)
+                : null;
 
             const genConfig = createGenerationConfig(config, {
                 resolution: skillResolution,
@@ -273,14 +323,20 @@ export const useGenerationLogic = (
                 config: genConfig,
                 colorImage: config.colorImage || undefined,
                 styleImageBase64: config.referenceImages[0] || undefined,
+                editImageBase64: stickerConfig?.referenceImage || undefined,
                 preferredImageApiId: config.preferredImageApiId,
             });
 
-            const dims = await canvas.getImageDimensions(asset.base64);
-            const newImage = createGeneratedImage(asset, dims, genConfig, {
+            const stickerResult = await applyStickerWorkflow(skillType, skillConfig, asset);
+            const dims = await canvas.getImageDimensions(stickerResult.asset.base64);
+            const newImage = createGeneratedImage(stickerResult.asset, dims, genConfig, {
                 batchId: `skill-${skillType}-${Date.now()}`,
                 originalDescription: config.description,
                 projectId: currentProjectId,
+                details: stickerResult.stickerDetails ? {
+                    sticker: stickerResult.stickerDetails,
+                    referenceImages: stickerConfig?.referenceImage ? [{ label: 'Sticker reference', url: stickerConfig.referenceImage }] : undefined,
+                } : undefined,
             });
 
             await canvas.handleSaveToHistory(newImage);
@@ -347,14 +403,19 @@ export const useGenerationLogic = (
                     config: genConfig,
                     colorImage: config.colorImage || undefined,
                     styleImageBase64: refImage || config.referenceImages[0] || undefined,
+                    editImageBase64: skillType === 'sticker-design' && skillConfig.stickerDesign?.referenceImage
+                        ? skillConfig.stickerDesign.referenceImage
+                        : undefined,
                     preferredImageApiId: config.preferredImageApiId,
                 });
 
-                const dims = await canvas.getImageDimensions(asset.base64);
-                const newImage = createGeneratedImage(asset, dims, genConfig, {
+                const stickerResult = await applyStickerWorkflow(skillType, skillConfig, asset);
+                const dims = await canvas.getImageDimensions(stickerResult.asset.base64);
+                const newImage = createGeneratedImage(stickerResult.asset, dims, genConfig, {
                     batchId,
                     originalDescription: pageContent,
                     projectId: currentProjectId,
+                    details: stickerResult.stickerDetails ? { sticker: stickerResult.stickerDetails } : undefined,
                 });
 
                 await canvas.handleSaveToHistory(newImage);

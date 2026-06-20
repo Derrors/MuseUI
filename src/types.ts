@@ -136,6 +136,20 @@ export type StickerShape = 'custom' | 'circle' | 'square' | 'rounded' | 'star' |
 export type StickerTheme = 'character' | 'emoji' | 'text-quote' | 'object' | 'animal' | 'food' | 'nature';
 export type StickerSize = 'small' | 'medium' | 'large' | 'sheet';
 export type StickerBackground = 'transparent' | 'white' | 'colored' | 'pattern';
+export type StickerLayoutMode = 'single' | 'three-views' | 'collection';
+export type StickerBackgroundMode = 'transparent' | 'keep';
+
+export interface StickerTextConfig {
+  enabled: boolean;
+  content: string;
+  font: 'rounded' | 'bold' | 'handwritten' | 'display';
+  hasBorder: boolean;
+}
+
+export interface StickerCollectionConfig {
+  count: number;
+  itemPrompts: string[];
+}
 
 export interface StickerDesignConfig {
   style: StickerStyle;
@@ -146,6 +160,13 @@ export interface StickerDesignConfig {
   subjectName: string;
   expression: string;
   aspect: MediaAspectRatio;
+  layoutMode?: StickerLayoutMode;
+  backgroundMode?: StickerBackgroundMode;
+  useStickerBorder?: boolean;
+  allowFacialFeatures?: boolean;
+  textOverlay?: StickerTextConfig;
+  referenceImage?: string | null;
+  collection?: StickerCollectionConfig;
 }
 
 // --- Unified Skill Config ---
@@ -319,7 +340,55 @@ export interface GeneratedImage {
       label: string;
       url: string; // Base64
     }[];
+    sticker?: StickerAssetMetadata;
   };
+}
+
+export interface ImageCropBox {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+export interface CropAdjustments {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+export interface StickerSplitSource {
+  box: ImageCropBox;
+  sourceWidth: number;
+  sourceHeight: number;
+  cropAdjustments?: CropAdjustments;
+}
+
+export interface StickerAssetItem {
+  id: string;
+  url: string;
+  prompt: string;
+  splitIndex: number;
+  splitMethod?: 'auto' | 'manual';
+  splitSource?: StickerSplitSource;
+}
+
+export interface StickerAssetMetadata {
+  kind: 'sticker';
+  transparentWorkflow: boolean;
+  backgroundRemoved?: boolean;
+  backgroundColor?: 'white' | 'black';
+  hasStickerBorder: boolean;
+  hasText: boolean;
+  hasReferenceImage: boolean;
+  layoutMode: StickerLayoutMode;
+  isCollection: boolean;
+  collectionCount?: number;
+  collectionItems?: StickerAssetItem[];
+  splitMethod?: 'auto' | 'manual';
+  sourceType?: 'generated' | 'uploaded';
+  error?: string;
 }
 
 // NEW: Canvas Types

@@ -4,7 +4,19 @@ import { GeneratedImage, LangType, Project } from '../types';
 import { I18N } from '../constants';
 import DesignSpecRenderer from './DesignSpecRenderer';
 import JSZip from 'jszip';
-import { getHistoryPaginated, HistoryPaginatedResponse } from '../services/idbHistoryService';
+import { getHistoryPaginated, saveImageToHistory } from '../services/idbHistoryService';
+import {
+    buildStickerZipBlob,
+    getStickerDownloadItems,
+    isStickerImage,
+    repairStickerTransparency,
+    splitStickerCollectionByGridDetailed,
+    splitStickerCollectionDetailed,
+    stickerItemToGeneratedImage,
+    withStickerCollectionItems,
+    withStickerMetadata,
+} from '../domain/stickers';
+import type { StickerAssetItem } from '../types';
 
 interface Props {
     history: GeneratedImage[];
@@ -31,6 +43,8 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
     const [isSelectMode, setIsSelectMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [zoomedImage, setZoomedImage] = useState<GeneratedImage | null>(null);
+    const [processingStickerId, setProcessingStickerId] = useState<string | null>(null);
+    const [gridSplit, setGridSplit] = useState({ rows: 2, columns: 3 });
     const fileInputRef = useRef<HTMLInputElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -125,7 +139,9 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
 
     const filteredImages = useMemo(() => {
         return history.filter(img => {
-            const matchPlatform = filterPlatform === 'all' || img.details?.platform === filterPlatform;
+            const matchPlatform = filterPlatform === 'all'
+                || (filterPlatform === 'stickers' && isStickerImage(img))
+                || img.details?.platform === filterPlatform;
             const imgStyle = getStyleName(img.details?.style);
             const matchStyle = filterStyle === 'all' || imgStyle === filterStyle;
             const matchProject = filterProjectId === 'all'
@@ -201,9 +217,15 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
         for (const id of selectedIds) {
             const img = history.find(i => i.id === id);
             if (img && img.url) {
-                const base64Data = img.url.replace(/^data:image\/(png|jpeg|jpg);base64,/, "");
-                zip.file(`muse-ui-${id}.png`, base64Data, { base64: true });
-                count++;
+                const files = isStickerImage(img)
+                    ? getStickerDownloadItems(img)
+                    : [{ filename: `muse-ui-${id}.png`, url: img.url }];
+                for (const file of files) {
+                    const base64Data = file.url.split(',')[1];
+                    if (!base64Data) continue;
+                    zip.file(`${id}-${file.filename}`, base64Data, { base64: true });
+                    count++;
+                }
             }
         }
 
@@ -338,6 +360,117 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
         }
     };
 
+    const notify = (message: string, type: 'success' | 'error' | 'info') => {
+        onAddNotification?.(message, type);
+    };
+
+    const updateGalleryImage = async (updated: GeneratedImage) => {
+        const replace = (items: GeneratedImage[]) => items.map(img => img.id === updated.id ? updated : img);
+        const nextHistory = replace(history);
+        const nextLocalHistory = replace(localHistory);
+        setLocalHistory(nextLocalHistory);
+        onUpdateHistory(nextHistory);
+        setZoomedImage(prev => prev?.id === updated.id ? updated : prev);
+        await saveImageToHistory(updated);
+    };
+
+    const handleRepairZoomedSticker = async () => {
+        if (!zoomedImage || !isStickerImage(zoomedImage)) return;
+        setProcessingStickerId(zoomedImage.id);
+        try {
+            const sticker = zoomedImage.details!.sticker!;
+            const repaired = await repairStickerTransparency(zoomedImage.url, {
+                backgroundColor: sticker.backgroundColor ?? 'white',
+            });
+            const updated = withStickerMetadata({
+                ...zoomedImage,
+                url: repaired.url,
+            }, {
+                ...sticker,
+                backgroundRemoved: repaired.backgroundRemoved || sticker.backgroundRemoved,
+                error: repaired.reason && !repaired.changed ? undefined : sticker.error,
+            });
+            await updateGalleryImage(updated);
+            notify(
+                repaired.changed
+                    ? (lang === 'zh' ? '透明背景已修复' : 'Transparency repaired')
+                    : (lang === 'zh' ? '图片已是透明背景' : 'Image is already transparent'),
+                'success',
+            );
+        } catch (err: any) {
+            notify(err?.message || (lang === 'zh' ? '透明修复失败' : 'Transparency repair failed'), 'error');
+        } finally {
+            setProcessingStickerId(null);
+        }
+    };
+
+    const handleAutoSplitZoomedSticker = async () => {
+        if (!zoomedImage || !isStickerImage(zoomedImage)) return;
+        setProcessingStickerId(zoomedImage.id);
+        try {
+            const result = await splitStickerCollectionDetailed(zoomedImage.url);
+            if (result.items.length === 0) {
+                throw new Error(lang === 'zh' ? '没有检测到可拆分的贴纸' : 'No separable stickers detected');
+            }
+            const updated = withStickerCollectionItems(zoomedImage, result.items, 'auto');
+            await updateGalleryImage(updated);
+            notify(lang === 'zh' ? `已拆分 ${result.items.length} 个贴纸` : `Split ${result.items.length} stickers`, 'success');
+        } catch (err: any) {
+            notify(err?.message || (lang === 'zh' ? '自动拆分失败' : 'Auto split failed'), 'error');
+        } finally {
+            setProcessingStickerId(null);
+        }
+    };
+
+    const handleGridSplitZoomedSticker = async () => {
+        if (!zoomedImage || !isStickerImage(zoomedImage)) return;
+        setProcessingStickerId(zoomedImage.id);
+        try {
+            const result = await splitStickerCollectionByGridDetailed(zoomedImage.url, gridSplit.rows, gridSplit.columns);
+            const updated = withStickerCollectionItems(zoomedImage, result.items, 'manual');
+            await updateGalleryImage(updated);
+            notify(lang === 'zh' ? `已按网格拆分 ${result.items.length} 个贴纸` : `Grid split ${result.items.length} stickers`, 'success');
+        } catch (err: any) {
+            notify(err?.message || (lang === 'zh' ? '网格拆分失败' : 'Grid split failed'), 'error');
+        } finally {
+            setProcessingStickerId(null);
+        }
+    };
+
+    const handleStickerZipDownload = async () => {
+        if (!zoomedImage || !isStickerImage(zoomedImage)) return;
+        setProcessingStickerId(zoomedImage.id);
+        try {
+            const blob = await buildStickerZipBlob(zoomedImage);
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `sticker-assets-${zoomedImage.id}.zip`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        } catch (err: any) {
+            notify(err?.message || (lang === 'zh' ? 'ZIP 下载失败' : 'ZIP download failed'), 'error');
+        } finally {
+            setProcessingStickerId(null);
+        }
+    };
+
+    const handleAddStickerItem = (item: StickerAssetItem) => {
+        if (!zoomedImage) return;
+        onAddBatch([stickerItemToGeneratedImage(zoomedImage, item)]);
+        notify(lang === 'zh' ? '子贴纸已加入画布' : 'Sticker item added to canvas', 'success');
+    };
+
+    const handleDownloadStickerItem = (item: StickerAssetItem) => {
+        const link = document.createElement('a');
+        link.href = item.url;
+        link.download = `${item.id}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <div className="fixed inset-0 z-50 bg-stone-100/95 dark:bg-stone-950/95 backdrop-blur-md flex flex-col animate-in fade-in duration-300">
 
@@ -357,6 +490,7 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
                             className="text-sm px-3 py-2 sm:py-1.5 bg-stone-50 dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded-lg focus:ring-teal-500 text-stone-700 dark:text-stone-300"
                         >
                             <option value="all">{t.platform}: {t.all}</option>
+                            <option value="stickers">{lang === 'zh' ? '贴纸资产' : 'Stickers'}</option>
                             {platforms.map(p => <option key={p} value={p}>{p}</option>)}
                         </select>
                         <select
@@ -537,6 +671,12 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
                                             <div className="absolute top-2 right-2 bg-cyan-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow z-10">SPEC</div>
                                         )}
 
+                                        {isStickerImage(img) && (
+                                            <div className="absolute bottom-2 left-2 bg-teal-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow z-10">
+                                                {img.details?.sticker?.isCollection ? (lang === 'zh' ? '贴纸集合' : 'SHEET') : (lang === 'zh' ? '贴纸' : 'STICKER')}
+                                            </div>
+                                        )}
+
                                         {/* Visual Stacking Effect at bottom if isStack */}
                                         {isStack && (
                                             <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-stone-400/50 dark:bg-stone-700/50 backdrop-blur-sm mx-2 rounded-t-sm block translate-y-1"></div>
@@ -673,6 +813,123 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
                                         {zoomedImage.prompt}
                                     </p>
                                 </div>
+
+                                {isStickerImage(zoomedImage) && (
+                                    <div className="rounded-xl border border-stone-800 bg-stone-950/70 p-3 space-y-3">
+                                        <div className="flex flex-wrap gap-1.5">
+                                            <span className="px-2 py-1 rounded bg-teal-500/15 text-teal-300 text-[10px] font-bold">
+                                                {zoomedImage.details?.sticker?.layoutMode}
+                                            </span>
+                                            {zoomedImage.details?.sticker?.transparentWorkflow && (
+                                                <span className="px-2 py-1 rounded bg-sky-500/15 text-sky-300 text-[10px] font-bold">
+                                                    {zoomedImage.details?.sticker?.backgroundRemoved ? (lang === 'zh' ? '已透明' : 'Transparent') : (lang === 'zh' ? '待修复' : 'Needs Alpha')}
+                                                </span>
+                                            )}
+                                            {zoomedImage.details?.sticker?.hasStickerBorder && (
+                                                <span className="px-2 py-1 rounded bg-white/10 text-white text-[10px] font-bold">
+                                                    {lang === 'zh' ? '白边' : 'Border'}
+                                                </span>
+                                            )}
+                                            {zoomedImage.details?.sticker?.hasText && (
+                                                <span className="px-2 py-1 rounded bg-amber-500/15 text-amber-300 text-[10px] font-bold">
+                                                    {lang === 'zh' ? '文字' : 'Text'}
+                                                </span>
+                                            )}
+                                            {zoomedImage.details?.sticker?.hasReferenceImage && (
+                                                <span className="px-2 py-1 rounded bg-purple-500/15 text-purple-300 text-[10px] font-bold">
+                                                    {lang === 'zh' ? '参考图' : 'Ref'}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {zoomedImage.details?.sticker?.error && (
+                                            <p className="text-[11px] text-red-300 leading-relaxed">{zoomedImage.details.sticker.error}</p>
+                                        )}
+
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <button
+                                                onClick={handleRepairZoomedSticker}
+                                                disabled={processingStickerId === zoomedImage.id}
+                                                className="px-3 py-2 rounded-lg text-xs font-bold bg-sky-500/15 text-sky-200 hover:bg-sky-500/25 disabled:opacity-50"
+                                            >
+                                                {lang === 'zh' ? '修复透明' : 'Repair Alpha'}
+                                            </button>
+                                            <button
+                                                onClick={handleAutoSplitZoomedSticker}
+                                                disabled={processingStickerId === zoomedImage.id}
+                                                className="px-3 py-2 rounded-lg text-xs font-bold bg-teal-500/15 text-teal-200 hover:bg-teal-500/25 disabled:opacity-50"
+                                            >
+                                                {lang === 'zh' ? '自动拆分' : 'Auto Split'}
+                                            </button>
+                                        </div>
+
+                                        <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
+                                            <input
+                                                type="number"
+                                                min={1}
+                                                max={8}
+                                                value={gridSplit.rows}
+                                                onChange={(e) => setGridSplit(prev => ({ ...prev, rows: Number(e.target.value) || 1 }))}
+                                                className="px-2 py-2 text-xs rounded-lg border border-stone-700 bg-stone-900 text-stone-200"
+                                                aria-label={lang === 'zh' ? '行数' : 'Rows'}
+                                            />
+                                            <input
+                                                type="number"
+                                                min={1}
+                                                max={8}
+                                                value={gridSplit.columns}
+                                                onChange={(e) => setGridSplit(prev => ({ ...prev, columns: Number(e.target.value) || 1 }))}
+                                                className="px-2 py-2 text-xs rounded-lg border border-stone-700 bg-stone-900 text-stone-200"
+                                                aria-label={lang === 'zh' ? '列数' : 'Columns'}
+                                            />
+                                            <button
+                                                onClick={handleGridSplitZoomedSticker}
+                                                disabled={processingStickerId === zoomedImage.id}
+                                                className="px-3 py-2 rounded-lg text-xs font-bold bg-stone-800 text-stone-200 hover:bg-stone-700 disabled:opacity-50"
+                                            >
+                                                {lang === 'zh' ? '网格' : 'Grid'}
+                                            </button>
+                                        </div>
+
+                                        {(zoomedImage.details?.sticker?.collectionItems?.length ?? 0) > 0 && (
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[11px] font-bold text-stone-400 uppercase">
+                                                        {lang === 'zh' ? '子贴纸' : 'Items'} ({zoomedImage.details?.sticker?.collectionItems?.length})
+                                                    </span>
+                                                    <button
+                                                        onClick={handleStickerZipDownload}
+                                                        disabled={processingStickerId === zoomedImage.id}
+                                                        className="text-[11px] font-bold text-teal-300 hover:text-teal-200 disabled:opacity-50"
+                                                    >
+                                                        ZIP
+                                                    </button>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2 max-h-52 overflow-y-auto pr-1">
+                                                    {zoomedImage.details?.sticker?.collectionItems?.map((item) => (
+                                                        <div key={item.id} className="rounded-lg border border-stone-800 bg-stone-900 overflow-hidden">
+                                                            <img src={item.url} alt="" className="w-full aspect-square object-contain bg-black/30" />
+                                                            <div className="grid grid-cols-2 gap-1 p-1">
+                                                                <button
+                                                                    onClick={() => handleAddStickerItem(item)}
+                                                                    className="px-2 py-1.5 rounded text-[10px] font-bold bg-white text-black hover:bg-stone-200"
+                                                                >
+                                                                    {lang === 'zh' ? '画布' : 'Canvas'}
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDownloadStickerItem(item)}
+                                                                    className="px-2 py-1.5 rounded text-[10px] font-bold bg-stone-800 text-stone-200 hover:bg-stone-700"
+                                                                >
+                                                                    PNG
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             <div className="mt-6 flex flex-col gap-3">

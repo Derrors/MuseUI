@@ -44,7 +44,22 @@ export const useConfigState = () => {
     const defaultStickerConfig: StickerDesignConfig = {
         style: 'flat', shape: 'custom', theme: 'character',
         size: 'medium', background: 'transparent',
-        subjectName: '', expression: '', aspect: '1:1'
+        subjectName: '', expression: '', aspect: '1:1',
+        layoutMode: 'single',
+        backgroundMode: 'transparent',
+        useStickerBorder: true,
+        allowFacialFeatures: true,
+        textOverlay: {
+            enabled: false,
+            content: '',
+            font: 'rounded',
+            hasBorder: true,
+        },
+        referenceImage: null,
+        collection: {
+            count: 6,
+            itemPrompts: ['', '', '', '', '', ''],
+        },
     };
 
     // Config
