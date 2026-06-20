@@ -33,6 +33,17 @@ The app is a static Vite + React SPA. It has no backend, no authentication, and 
 - The app does not ship with any backend service.
 - No API key is required at build time.
 
+## Change Log
+
+### 2026-06-20
+
+- Refactored generation logic into focused domain modules for generation config, generated image metadata, skill prompting, canvas artboard transforms, project snapshots, and API profile normalization.
+- Reworked API configuration around OpenAI-compatible profiles. Text model presets are limited to `gpt-5.4` and `gpt-5.5`; the image model preset is `gpt-image-2`.
+- Improved mobile responsiveness across the main workspace, top controls, API entry points, and API settings panels.
+- Removed legacy proxy recommendation content and old compatibility paths that no longer match the current OpenAI-compatible API flow.
+- Fixed DEV request monitor clearing and preserved the latest regeneration prompt in generated image history/details.
+- Added regression coverage for generation helpers, project config snapshots, and regeneration metadata.
+
 ## Getting Started
 
 ### Prerequisites
