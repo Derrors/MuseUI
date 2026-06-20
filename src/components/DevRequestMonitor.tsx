@@ -76,7 +76,7 @@ const DevRequestMonitor: React.FC<Props> = ({ lang }) => {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-stone-300 truncate">
-                  {log.provider === 'gemini' ? '🔷' : '🟢'} {log.model || log.provider}
+                  {log.model || log.provider}
                 </span>
                 <span className="text-stone-500 shrink-0">
                   {log.type === 'text' ? (isZh ? '文本' : 'TXT') : (isZh ? '图片' : 'IMG')}

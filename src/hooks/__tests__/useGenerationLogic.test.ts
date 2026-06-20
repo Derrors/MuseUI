@@ -2,10 +2,9 @@
 import { renderHook, act } from '@testing-library/react';
 import { useGenerationLogic } from '../useGenerationLogic';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as geminiService from '../../services/geminiService';
+import * as aiGenerationService from '../../services/aiGenerationService';
 
-// Mock geminiService
-vi.mock('../../services/geminiService');
+vi.mock('../../services/aiGenerationService');
 
 describe('useGenerationLogic', () => {
     const lang = 'zh';
@@ -74,14 +73,14 @@ describe('useGenerationLogic', () => {
     it('should handle auto generate pages', async () => {
         const { result } = renderHook(() => useGenerationLogic(lang, mockConfig, mockCanvas));
         const mockPages = [{ name: 'P1', description: 'D1' }];
-        (geminiService.generatePageList as any).mockResolvedValue(mockPages);
+        (aiGenerationService.generatePageList as any).mockResolvedValue(mockPages);
 
         await act(async () => {
             await result.current.handleAutoGeneratePages();
         });
 
         expect(mockConfig.setIsAutoGeneratingPages).toHaveBeenCalledWith(true);
-        expect(geminiService.generatePageList).toHaveBeenCalled();
+        expect(aiGenerationService.generatePageList).toHaveBeenCalled();
         expect(mockConfig.setPages).toHaveBeenCalledWith(mockPages);
         expect(mockConfig.setIsAutoGeneratingPages).toHaveBeenCalledWith(false);
     });
@@ -90,8 +89,8 @@ describe('useGenerationLogic', () => {
         const { result } = renderHook(() => useGenerationLogic(lang, mockConfig, mockCanvas));
         const mockAsset = { id: 'a1', url: 'test.png', prompt: 'prompt', timestamp: 123, base64: 'b64' };
 
-        (geminiService.constructPrompt as any).mockReturnValue('Constructed Prompt');
-        (geminiService.generateUIReference as any).mockResolvedValue(mockAsset);
+        (aiGenerationService.constructPrompt as any).mockReturnValue('Constructed Prompt');
+        (aiGenerationService.generateUIReference as any).mockResolvedValue(mockAsset);
         mockCanvas.getImageDimensions.mockResolvedValue({ width: 375, height: 667 });
 
         await act(async () => {
@@ -99,7 +98,7 @@ describe('useGenerationLogic', () => {
         });
 
         expect(result.current.isGenerating).toBe(false);
-        expect(geminiService.generateUIReference).toHaveBeenCalled();
+        expect(aiGenerationService.generateUIReference).toHaveBeenCalled();
         expect(mockCanvas.setArtboards).toHaveBeenCalled();
     });
 });

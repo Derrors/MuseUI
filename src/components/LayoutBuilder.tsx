@@ -2,7 +2,7 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { BUILDER_TOOLS, I18N, CATEGORY_MAP_ZH } from '../constants';
 import { LangType, ResolutionPreset, LayoutElement } from '../types';
-import { generateLayoutJson } from '../services/geminiService';
+import { generateLayoutJson } from '../services/aiGenerationService';
 import { getPresets, savePreset, deletePreset, LayoutPreset } from '../services/idbPresetService';
 
 
@@ -118,7 +118,7 @@ const LayoutBuilder: React.FC<Props> = ({ device, onSave, onCancel, lang, theme,
   // AI Gen State
   const [aiPrompt, setAiPrompt] = useState('');
   const [isAiGenerating, setIsAiGenerating] = useState(false);
-  const [aiModel, setAiModel] = useState<string>('gemini-2.5-flash');
+  const [aiModel, setAiModel] = useState<string>('gpt-5.4');
 
   const toggleCategory = (category: string) => {
     setExpandedCategories(prev =>
@@ -1109,9 +1109,8 @@ const LayoutBuilder: React.FC<Props> = ({ device, onSave, onCancel, lang, theme,
               onChange={(e) => setAiModel(e.target.value)}
               className="text-[10px] p-1 bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded text-stone-600 dark:text-stone-400"
             >
-              <option value="gemini-2.5-flash">Flash 2.5 (Fast)</option>
-              <option value="gemini-3-flash-preview">Flash 3 (Balanced)</option>
-              <option value="gemini-3-pro-preview">Pro 3 (Smart)</option>
+              <option value="gpt-5.4">GPT-5.4</option>
+              <option value="gpt-5.5">GPT-5.5</option>
             </select>
           </div>
           <div className="flex gap-2">

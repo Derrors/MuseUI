@@ -171,7 +171,7 @@ async function assertApiModalUsesPageScroll(page) {
 
   assert(state.body, 'mobile API modal: scroll body was not found', state);
   assert(state.body.overflowY === 'auto', 'mobile API modal: body should own vertical scrolling', state);
-  assert(state.lists.length === 2, 'mobile API modal: API lists were not found', state);
+  assert(state.lists.length === 1 && state.lists[0].role === 'profiles', 'mobile API modal: profile list was not found', state);
   assert(
     state.lists.every((item) => item.overflowY === 'visible' && item.scrollHeight <= item.clientHeight + 1),
     'mobile API modal: API config lists should expand instead of becoming nested scrollers',

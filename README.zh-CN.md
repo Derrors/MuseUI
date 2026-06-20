@@ -11,7 +11,7 @@ MuseUI 是一个纯浏览器运行的 AI 界面与图像设计生成器。它可
 ## 功能
 
 - 文本生成 UI 原型图
-- 支持 Gemini 和 OpenAI-compatible endpoint 的多供应商 API 配置
+- 支持 OpenAI-compatible API Profile 配置
 - 带生成画板的画布工作区
 - 支持参考图、颜色和布局输入
 - 支持封面、信息图、漫画、幻灯片、Logo、贴纸等技能模式
@@ -56,11 +56,11 @@ npm run dev
 
 打开应用后，使用右上角的 API 设置按钮进行配置。
 
-推荐的官方 endpoint：
+推荐的 Base URL：
 
-- Gemini：Base URL 留空即可使用官方 API，也可以填写 `https://generativelanguage.googleapis.com`
-- OpenAI text：`https://api.openai.com/v1/chat/completions`
-- OpenAI image：`https://api.openai.com/v1/images/generations`
+- OpenAI-compatible 根地址：`https://api.openai.com/v1`
+
+MuseUI 会自动拼接 `/chat/completions`、`/images/generations`、`/models` 等 endpoint。
 
 这个应用设计上通过浏览器 UI 进行配置。`.env.example` 只是用于本地开发备注；构建时不需要 API Key。
 

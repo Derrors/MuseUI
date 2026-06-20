@@ -8,7 +8,7 @@ import DesignTokenSelector from './DesignTokenSelector';
 import DesignMdSelector from './DesignMdSelector';
 import BackgroundSelector from './BackgroundSelector';
 import { I18N, UI_STYLES } from '../constants';
-import { getAPISettings } from '../services/apiKeyStore';
+import { getEnabledImageAPIs } from '../services/apiKeyStore';
 import { LangType, PlatformType, ResolutionPreset, UIStyle, DesignTokens, BackgroundConfig, PageRequest, LayoutElement, CreatorRole, MediaAspectRatio, MediaResolutionPreset, MediaType, SkillConfig, SkillType } from '../types';
 
 // Skill Panels
@@ -661,7 +661,7 @@ const AppSidebar: React.FC<Props> = (props) => {
                         className="flex-1 text-xs bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded px-2 py-1.5 text-stone-600 dark:text-stone-300"
                     >
                         <option value="">{props.lang === 'zh' ? '默认模型' : 'Default Model'}</option>
-                        {getAPISettings().imageAPIs.filter(a => a.enabled).map(api => (
+                        {getEnabledImageAPIs().map(api => (
                             <option key={api.id} value={api.id}>{api.name || api.imageModel || api.id}</option>
                         ))}
                     </select>

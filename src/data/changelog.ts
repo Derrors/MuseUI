@@ -60,7 +60,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     announcement: '🎉 MuseUI 正式发布！AI 驱动的 UI 设计生成器',
     changes: [
       'MuseUI 首个正式版本发布',
-      '支持 Gemini / OpenAI 多模型 API',
+      '支持 OpenAI 兼容多模型 API',
       '支持生成 UI 原型、封面图、信息图、小红书图、漫画、PPT',
       '支持 Design.md 设计系统导入',
       '支持视觉风格模板和布局密度策略',

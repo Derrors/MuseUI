@@ -1,8 +1,14 @@
 import { GenerationConfig, PageRequest, UIStyle, DesignSystem } from "../types";
 import { BUILDER_TOOLS, MEDIA_TYPES } from "../constants";
 import { callTextAPI, callImageAPI } from './aiService';
-import { Type } from "@google/genai";
 import { createId } from '../utils/id';
+
+const Type = {
+    ARRAY: 'array',
+    OBJECT: 'object',
+    STRING: 'string',
+    NUMBER: 'number',
+} as const;
 
 const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {

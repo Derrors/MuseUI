@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { GeneratedImage, GenerationConfig, LayoutElement, DesignSystem } from '../types';
-import { extractStyleFromImages, generatePageList, constructPrompt, generateDesignSpecJson, generateUIReference, analyzeLayoutImage, optimizeDescription } from '../services/geminiService';
-import { getAPISettings } from '../services/apiKeyStore';
+import { extractStyleFromImages, generatePageList, constructPrompt, generateDesignSpecJson, generateUIReference, analyzeLayoutImage, optimizeDescription } from '../services/aiGenerationService';
+import { DEFAULT_IMAGE_MODEL, getEnabledImageAPIs } from '../services/apiKeyStore';
 import { LangType } from '../types';
 import type { SkillConstants } from '../skills/promptBuilders';
 
@@ -614,8 +614,7 @@ export const useGenerationLogic = (
             layoutDensity: config.layoutDensityContent || undefined,
         } as any, false, !!canvas.layoutImage);
         if (devMode) {
-            const settings = getAPISettings();
-            const enabledImageAPIs = settings.imageAPIs.filter(a => a.enabled);
+            const enabledImageAPIs = getEnabledImageAPIs();
             let targetAPI = enabledImageAPIs[0];
             if (config.preferredImageApiId) {
                 const preferred = enabledImageAPIs.find(a => a.id === config.preferredImageApiId);
@@ -635,7 +634,7 @@ export const useGenerationLogic = (
                     targetAPI: {
                         provider: targetAPI.provider,
                         baseUrl: targetAPI.baseUrl,
-                        model: targetAPI.imageModel || 'nado-banana-2',
+                        model: targetAPI.imageModel || DEFAULT_IMAGE_MODEL,
                         name: targetAPI.name,
                     },
                     requestParams: {

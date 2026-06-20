@@ -13,7 +13,7 @@ The app is a static Vite + React SPA. It has no backend, no authentication, and 
 ## Features
 
 - Text-to-image UI mockup generation
-- Multi-provider API configuration for Gemini and OpenAI-compatible endpoints
+- OpenAI-compatible API profile configuration
 - Canvas workspace with generated artboards
 - Reference image, color, and layout inputs
 - Skill modes for covers, infographics, comics, slide decks, logos, stickers, and more
@@ -58,11 +58,11 @@ The development server runs on `http://localhost:3003` by default.
 
 Open the app and use the API settings button in the top-right corner.
 
-Recommended official endpoints:
+Recommended Base URL:
 
-- Gemini: leave Base URL empty for the official API, or use `https://generativelanguage.googleapis.com`
-- OpenAI text: `https://api.openai.com/v1/chat/completions`
-- OpenAI image: `https://api.openai.com/v1/images/generations`
+- OpenAI-compatible root: `https://api.openai.com/v1`
+
+MuseUI appends endpoint paths such as `/chat/completions`, `/images/generations`, and `/models` automatically.
 
 The app is designed to be configured through the browser UI. `.env.example` is intentionally only a local notes file; no API key is required at build time.
 

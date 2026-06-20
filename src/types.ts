@@ -336,7 +336,8 @@ export interface Artboard {
   isNew?: boolean; // True when freshly generated, cleared on first click
 }
 
-export type AIProvider = 'gemini' | 'openai';
+export type AIProvider = 'openai';
+export type OpenAIImageMode = 'images' | 'chat' | 'auto';
 
 export interface APIConfig {
   id: string;
@@ -347,11 +348,13 @@ export interface APIConfig {
   textModel?: string;
   imageModel?: string;
   enabled: boolean;
+  textEnabled?: boolean;
+  imageEnabled?: boolean;
+  imageMode?: OpenAIImageMode;
 }
 
 export interface APISettings {
-  textAPIs: APIConfig[];
-  imageAPIs: APIConfig[];
+  profiles: APIConfig[];
 }
 
 export interface RequestLogEntry {
