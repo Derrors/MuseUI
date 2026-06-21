@@ -1,14 +1,41 @@
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import type { IncomingMessage } from 'node:http';
 
 const API_PROXY_PREFIX = '/api-proxy';
+
+const isSameOriginDevRequest = (req: IncomingMessage): boolean => {
+  const { headers } = req;
+  const host = headers.host;
+  if (!host || Array.isArray(host)) return false;
+
+  const allowedOrigins = new Set([`http://${host}`, `https://${host}`]);
+  const origin = Array.isArray(headers.origin) ? headers.origin[0] : headers.origin;
+  if (origin) return allowedOrigins.has(origin);
+
+  const referer = Array.isArray(headers.referer) ? headers.referer[0] : headers.referer;
+  if (!referer) return false;
+
+  try {
+    return allowedOrigins.has(new URL(referer).origin);
+  } catch {
+    return false;
+  }
+};
 
 const apiProxyPlugin = (): Plugin => ({
   name: 'muse-ui-api-proxy',
   configureServer(server) {
     server.middlewares.use(API_PROXY_PREFIX, async (req, res) => {
       try {
+        if (!isSameOriginDevRequest(req)) {
+          res.statusCode = 403;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'API proxy is only available to the dev server origin' }));
+          return;
+        }
+
         const requestUrl = new URL(req.url || '/', 'http://localhost');
         const target = requestUrl.searchParams.get('target');
 

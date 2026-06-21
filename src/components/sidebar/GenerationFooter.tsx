@@ -1,7 +1,7 @@
 import React from 'react';
 import { getEnabledImageAPIs } from '../../services/apiKeyStore';
 import type { CreatorRole, LangType } from '../../types';
-import IconLoader from '../IconLoader';
+import { Button, SelectField, Text } from '../ui';
 
 interface Props {
   lang: LangType;
@@ -53,72 +53,60 @@ const GenerationFooter: React.FC<Props> = (props) => {
     : (props.lang === 'zh' ? '未配置图片 API' : 'No image API');
 
   return (
-  <div className="p-4 border-t border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 z-20">
-    <div className="mb-3 rounded-lg border border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950/60 px-3 py-2">
-      <div className="flex items-center justify-between gap-3 text-[10px] uppercase tracking-wide text-stone-400 dark:text-stone-500">
+  <div className="z-20 border-t border-[var(--gray-5)] bg-[var(--color-panel-solid)] p-4">
+    <div className="mb-3 rounded-lg border border-[var(--gray-5)] bg-[var(--gray-2)] px-3 py-2">
+      <div className="flex items-center justify-between gap-3 text-[10px] uppercase tracking-wide text-[var(--gray-10)]">
         <span>{props.lang === 'zh' ? '当前任务' : 'Current task'}</span>
         <span className="truncate">{imageApiLabel}</span>
       </div>
-      <div className="mt-1 flex items-center gap-2 text-xs font-bold text-stone-700 dark:text-stone-200">
+      <div className="mt-1 flex items-center gap-2 text-xs font-bold text-[var(--gray-12)]">
         <span className="truncate">{props.modeSummary}</span>
-        <span className="h-1 w-1 rounded-full bg-stone-300 dark:bg-stone-700 shrink-0" />
-        <span className="truncate text-stone-500 dark:text-stone-400">{props.outputSummary}</span>
+        <span className="h-1 w-1 shrink-0 rounded-full bg-[var(--gray-7)]" />
+        <span className="truncate text-[var(--gray-10)]">{props.outputSummary}</span>
       </div>
     </div>
 
     <div className="flex gap-2 mb-3">
-      <select
-        value={props.promptLanguage || ''}
-        onChange={e => props.setPromptLanguage(e.target.value || null)}
-        className="flex-1 text-xs bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded px-2 py-1.5 text-stone-600 dark:text-stone-300"
-      >
-        <option value="">{props.lang === 'zh' ? '语言不限' : 'Any Language'}</option>
-        <option value="zh">中文</option>
-        <option value="en">English</option>
-        <option value="ja">日本語</option>
-        <option value="ko">한국어</option>
-        <option value="fr">Français</option>
-        <option value="de">Deutsch</option>
-        <option value="es">Español</option>
-      </select>
-      <select
-        value={props.preferredImageApiId || ''}
-        onChange={e => props.setPreferredImageApiId(e.target.value || null)}
-        className="flex-1 text-xs bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded px-2 py-1.5 text-stone-600 dark:text-stone-300"
-      >
-        <option value="">{props.lang === 'zh' ? '默认模型' : 'Default Model'}</option>
-        {enabledImageApis.map(api => (
-          <option key={api.id} value={api.id}>{api.name || api.imageModel || api.id}</option>
-        ))}
-      </select>
+      <SelectField
+        value={props.promptLanguage || '__any__'}
+        onValueChange={value => props.setPromptLanguage(value === '__any__' ? null : value)}
+        options={[
+          { value: '__any__', label: props.lang === 'zh' ? '语言不限' : 'Any Language' },
+          { value: 'zh', label: '中文' },
+          { value: 'en', label: 'English' },
+          { value: 'ja', label: '日本語' },
+          { value: 'ko', label: '한국어' },
+          { value: 'fr', label: 'Français' },
+          { value: 'de', label: 'Deutsch' },
+          { value: 'es', label: 'Español' },
+        ]}
+      />
+      <SelectField
+        value={props.preferredImageApiId || '__default__'}
+        onValueChange={value => props.setPreferredImageApiId(value === '__default__' ? null : value)}
+        options={[
+          { value: '__default__', label: props.lang === 'zh' ? '默认模型' : 'Default Model' },
+          ...enabledImageApis.map(api => ({ value: api.id, label: api.name || api.imageModel || api.id })),
+        ]}
+      />
     </div>
 
-    <button
+    <Button
       onClick={props.onPrepareGeneration}
       disabled={props.isGenerating}
-      className={`w-full py-3 rounded-lg font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${props.isGenerating
-        ? 'bg-stone-400 cursor-not-allowed'
-        : 'bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 shadow-teal-500/20 active:scale-95'
-        }`}
+      className="w-full"
+      size="3"
+      color="ruby"
+      iconName={props.isGenerating ? 'refresh' : 'magic-wand'}
     >
-      {props.isGenerating ? (
-        <>
-          <IconLoader name="refresh" className="animate-spin" size={16} />
-          {props.batchProgress || props.processingLabel}
-        </>
-      ) : (
-        <>
-          <IconLoader name="magic-wand" size={16} />
-          {getGenerateLabel(props)}
-        </>
-      )}
-    </button>
+      {props.isGenerating ? (props.batchProgress || props.processingLabel) : getGenerateLabel(props)}
+    </Button>
     {props.isGenerating && (
-      <div className="mt-2 w-full bg-stone-100 dark:bg-stone-800 rounded-full h-1.5 overflow-hidden">
-        <div className="bg-teal-500 h-full transition-all duration-300" style={{ width: `${props.progressValue}%` }}></div>
+      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--gray-4)]">
+        <div className="h-full bg-[var(--accent-9)] transition-all duration-300" style={{ width: `${props.progressValue}%` }}></div>
       </div>
     )}
-    {props.error && <p className="text-xs text-red-500 mt-2 text-center">{props.error}</p>}
+    {props.error && <Text as="p" size="1" color="red" mt="2" align="center">{props.error}</Text>}
   </div>
   );
 };

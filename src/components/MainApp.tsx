@@ -15,6 +15,7 @@ import ImageDetailsModal from './modals/ImageDetailsModal';
 import ProjectManagerModal from './modals/ProjectManagerModal';
 import ChangelogModal from './modals/ChangelogModal';
 import { ToastContainer, ConfirmationDialog } from './Toast';
+import { Button, Card, Heading, Text, ThemeProvider } from './ui';
 
 import { useAppLogic } from '@/hooks/useAppLogic';
 
@@ -114,7 +115,8 @@ const MainApp: React.FC<Props> = ({ projectId }) => {
     };
 
     return (
-        <div className={`w-full h-[100dvh] flex flex-col overflow-hidden ${state.theme}`}>
+        <ThemeProvider appearance={state.theme}>
+        <div className={`w-full h-[100dvh] flex flex-col overflow-hidden ${state.theme} bg-[var(--gray-1)] text-[var(--gray-12)]`}>
             <AppHeader
                 lang={state.lang}
                 setLang={actions.setLang}
@@ -370,63 +372,40 @@ const MainApp: React.FC<Props> = ({ projectId }) => {
             )}
 
             {showFirstUseTips && (
-                <div className="fixed inset-0 z-[320] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onMouseDown={closeFirstUseTips}>
-                    <div
-                        className="w-full max-w-md rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 shadow-2xl p-6"
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="first-use-tips-title"
-                        onMouseDown={(e) => e.stopPropagation()}
-                    >
-                        <div className="flex items-start gap-3 mb-5">
-                            <div className="w-10 h-10 rounded-xl bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-300 flex items-center justify-center shrink-0">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M12 2v4" />
-                                    <path d="M12 18v4" />
-                                    <path d="m4.93 4.93 2.83 2.83" />
-                                    <path d="m16.24 16.24 2.83 2.83" />
-                                    <path d="M2 12h4" />
-                                    <path d="M18 12h4" />
-                                    <path d="m4.93 19.07 2.83-2.83" />
-                                    <path d="m16.24 7.76 2.83-2.83" />
-                                </svg>
-                            </div>
-                            <div>
-                                <h2 id="first-use-tips-title" className="text-base font-bold text-stone-900 dark:text-white">
-                                    {state.lang === 'zh' ? '开始使用' : 'Getting Started'}
-                                </h2>
-                                <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 leading-relaxed">
-                                    {state.lang === 'zh'
-                                        ? '按这三步走，第一次生成会更顺。'
-                                        : 'Follow these three steps for a smoother first run.'}
-                                </p>
-                            </div>
+                <div className="fixed inset-0 z-[320] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onMouseDown={closeFirstUseTips}>
+                    <Card className="w-full max-w-md p-6 shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
+                        <div className="mb-5">
+                            <Heading size="4" as="h2">
+                                {state.lang === 'zh' ? '开始使用' : 'Getting Started'}
+                            </Heading>
+                            <Text as="p" size="2" color="gray" mt="1">
+                                {state.lang === 'zh'
+                                    ? '按这三步走，第一次生成会更顺。'
+                                    : 'Follow these three steps for a smoother first run.'}
+                            </Text>
                         </div>
-
                         <div className="space-y-3">
                             {[
                                 state.lang === 'zh' ? '配置 API：打开右上角 API，填入 Key、Base URL 和模型。' : 'Configure API: open API settings, then enter the key, Base URL, and models.',
                                 state.lang === 'zh' ? '填写提示词：在配置页写清楚主题、场景和想要的风格。' : 'Write the prompt: describe the subject, scenario, and desired style.',
                                 state.lang === 'zh' ? '生成并检查画布：生成后会自动切到画布，可点“继续编辑”返回配置。' : 'Generate and check canvas: after generation, review the canvas and tap Continue editing when needed.',
                             ].map((tip, index) => (
-                                <div key={tip} className="flex items-start gap-3 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/60 p-3">
-                                    <span className="w-5 h-5 rounded-full bg-teal-500 text-white text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                                <Card key={tip}>
+                                    <div className="flex items-start gap-3">
+                                    <span className="w-5 h-5 rounded-full bg-[var(--accent-9)] text-white text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">
                                         {index + 1}
                                     </span>
-                                    <p className="text-sm text-stone-700 dark:text-stone-200 leading-relaxed">{tip}</p>
-                                </div>
+                                    <Text as="p" size="2" className="leading-relaxed">{tip}</Text>
+                                    </div>
+                                </Card>
                             ))}
                         </div>
-
                         <div className="mt-6 flex justify-end">
-                            <button
-                                onClick={closeFirstUseTips}
-                                className="px-5 py-2 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium transition-colors"
-                            >
+                            <Button onClick={closeFirstUseTips} color="ruby">
                                 {state.lang === 'zh' ? '知道了' : 'Got it'}
-                            </button>
+                            </Button>
                         </div>
-                    </div>
+                    </Card>
                 </div>
             )}
 
@@ -441,6 +420,7 @@ const MainApp: React.FC<Props> = ({ projectId }) => {
                 </div>
             )}
         </div>
+        </ThemeProvider>
     );
 };
 

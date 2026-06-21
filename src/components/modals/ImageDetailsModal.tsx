@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { GeneratedImage, LangType } from '../../types';
 import { I18N } from '../../constants';
 import { getAssetDetails } from '../../services/idbHistoryService';
+import { Badge, Card, DialogShell, Flex, Text } from '../ui';
 
 interface Props {
     image: GeneratedImage | null;
@@ -44,74 +45,77 @@ const ImageDetailsModal: React.FC<Props> = ({ image, onClose, lang }) => {
     const target = displayImage; // Use local state
 
     return (
-        <div className="fixed inset-0 z-[80] bg-black/90 flex items-center justify-center p-0 sm:p-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="bg-white dark:bg-stone-900 rounded-none sm:rounded-2xl w-full max-w-4xl h-[100dvh] sm:h-auto sm:max-h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-stone-200 dark:border-stone-800">
-
-                {/* Header */}
-                <div className="flex justify-between items-center gap-3 p-4 border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950">
-                    <h3 className="min-w-0 font-bold text-base sm:text-lg text-stone-800 dark:text-white flex flex-wrap items-center gap-2">
-                        <span>🔍</span> {lang === 'zh' ? '生成详情' : 'Generation Details'}
-                        {loading && <span className="text-xs text-stone-400 bg-stone-200 dark:bg-stone-800 px-2 py-0.5 rounded-full animate-pulse">{lang === 'zh' ? '加载中...' : 'Loading...'}</span>}
-                    </h3>
-                    <button onClick={onClose} className="min-h-10 min-w-10 text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 p-1">
-                        ✕
-                    </button>
-                </div>
-
-                <div className="flex-1 overflow-auto flex flex-col md:flex-row">
+        <DialogShell
+            open={!!displayImage}
+            onOpenChange={(open) => { if (!open) onClose(); }}
+            title={lang === 'zh' ? '生成详情' : 'Generation Details'}
+            description={loading
+                ? (lang === 'zh' ? '正在加载完整生成信息。' : 'Loading full generation details.')
+                : (lang === 'zh' ? '查看生成参数、提示词和参考图。' : 'Inspect generation parameters, prompt and references.')}
+            size="lg"
+            closeLabel={lang === 'zh' ? '关闭生成详情' : 'Close generation details'}
+        >
+                {loading && (
+                    <Flex mb="3">
+                        <Badge color="gray" variant="soft">{lang === 'zh' ? '加载中...' : 'Loading...'}</Badge>
+                    </Flex>
+                )}
+                <div className="flex min-h-[calc(100dvh-180px)] flex-col overflow-hidden md:min-h-[560px] md:flex-row">
                     {/* Left: Image Preview */}
-                    <div className="flex-1 bg-stone-100 dark:bg-stone-950 p-3 sm:p-6 flex items-center justify-center min-h-[260px] sm:min-h-[300px]">
+                    <div className="flex min-h-[260px] flex-1 items-center justify-center bg-[var(--gray-2)] p-3 sm:min-h-[300px] sm:p-6">
                         <img
                             src={target.url}
-                            className="max-w-full max-h-full object-contain rounded-lg shadow-lg border border-stone-200 dark:border-stone-800"
+                            className="max-h-full max-w-full rounded-lg border border-[var(--gray-5)] object-contain shadow-lg"
                             alt="Result"
                         />
                     </div>
 
                     {/* Right: Info */}
-                    <div className="w-full md:w-96 p-4 sm:p-6 bg-white dark:bg-stone-900 border-t md:border-t-0 md:border-l border-stone-200 dark:border-stone-800 flex flex-col gap-6 overflow-y-auto">
+                    <div className="flex w-full flex-col gap-6 overflow-y-auto border-t border-[var(--gray-5)] bg-[var(--color-panel-solid)] p-4 md:w-96 md:border-l md:border-t-0 sm:p-6">
 
                         {/* Meta */}
-                        <div className="space-y-2 text-sm text-stone-600 dark:text-stone-400">
-                            <div className="flex justify-between border-b border-stone-100 dark:border-stone-800 pb-2">
-                                <span>{t.platform}</span>
-                                <span className="font-bold text-stone-800 dark:text-stone-200">{target.details?.platform || '-'}</span>
+                        <Card>
+                            <div className="space-y-2 text-sm">
+                            <div className="flex justify-between gap-4 border-b border-[var(--gray-4)] pb-2">
+                                <Text color="gray">{t.platform}</Text>
+                                <Text weight="bold" className="text-right">{target.details?.platform || '-'}</Text>
                             </div>
-                            <div className="flex justify-between border-b border-stone-100 dark:border-stone-800 pb-2">
-                                <span>{t.resolution}</span>
-                                <span className="font-bold text-stone-800 dark:text-stone-200">{target.details?.resolution || '-'}</span>
+                            <div className="flex justify-between gap-4 border-b border-[var(--gray-4)] pb-2">
+                                <Text color="gray">{t.resolution}</Text>
+                                <Text weight="bold" className="text-right">{target.details?.resolution || '-'}</Text>
                             </div>
-                            <div className="flex justify-between border-b border-stone-100 dark:border-stone-800 pb-2">
-                                <span>{t.designStyle}</span>
-                                <span className="font-bold text-stone-800 dark:text-stone-200">
+                            <div className="flex justify-between gap-4">
+                                <Text color="gray">{t.designStyle}</Text>
+                                <Text weight="bold" className="text-right">
                                     {typeof target.details?.style === 'object'
                                         ? (target.details.style as any).name || (target.details.style as any).id
                                         : target.details?.style || '-'}
-                                </span>
+                                </Text>
                             </div>
-                        </div>
+                            </div>
+                        </Card>
 
                         {/* Prompt */}
                         <div>
-                            <h4 className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">{lang === 'zh' ? '完整提示词 (Prompt)' : 'Full Prompt'}</h4>
-                            <div className="bg-stone-50 dark:bg-stone-950 p-3 rounded-lg border border-stone-200 dark:border-stone-800">
-                                <p className="text-xs text-stone-600 dark:text-stone-400 font-mono whitespace-pre-wrap break-words leading-relaxed max-h-48 overflow-y-auto custom-scrollbar">
+                            <Text size="1" weight="bold" color="gray">{lang === 'zh' ? '完整提示词 (Prompt)' : 'Full Prompt'}</Text>
+                            <Card className="mt-2">
+                                <p className="max-h-48 overflow-y-auto break-words font-mono text-xs leading-relaxed text-[var(--gray-11)] whitespace-pre-wrap custom-scrollbar">
                                     {loading ? (lang === 'zh' ? '正在加载提示词...' : 'Loading prompt...') : (target.details?.fullPrompt || target.prompt)}
                                 </p>
-                            </div>
+                            </Card>
                         </div>
 
                         {/* References */}
                         {target.details?.referenceImages && target.details.referenceImages.length > 0 && (
                             <div>
-                                <h4 className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">{lang === 'zh' ? '参考图' : 'Reference Images'}</h4>
+                                <Text size="1" weight="bold" color="gray">{lang === 'zh' ? '参考图' : 'Reference Images'}</Text>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                     {target.details.referenceImages.map((ref, idx) => (
                                         <div key={idx} className="flex flex-col gap-1 group">
-                                            <div className="aspect-square rounded overflow-hidden border border-stone-200 dark:border-stone-700 bg-stone-100 dark:bg-stone-950">
-                                                <img src={ref.url} className="w-full h-full object-cover" />
+                                            <div className="aspect-square overflow-hidden rounded border border-[var(--gray-5)] bg-[var(--gray-2)]">
+                                                <img src={ref.url} alt={ref.label} className="w-full h-full object-cover" />
                                             </div>
-                                            <span className="text-[9px] text-stone-400 truncate text-center">{ref.label}</span>
+                                            <Text size="1" color="gray" className="truncate text-center">{ref.label}</Text>
                                         </div>
                                     ))}
                                 </div>
@@ -120,8 +124,7 @@ const ImageDetailsModal: React.FC<Props> = ({ image, onClose, lang }) => {
 
                     </div>
                 </div>
-            </div>
-        </div>
+        </DialogShell>
     );
 };
 

@@ -1,7 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import GalleryManager from '../GalleryManager';
 import type { GeneratedImage } from '../../types';
+import { ThemeProvider } from '../ui';
 
 vi.mock('../../services/idbHistoryService', () => ({
   getHistoryPaginated: vi.fn(),
@@ -9,6 +11,12 @@ vi.mock('../../services/idbHistoryService', () => ({
 }));
 
 const { getHistoryPaginated } = await import('../../services/idbHistoryService');
+
+const renderWithTheme = (ui: ReactElement) => render(
+  <ThemeProvider appearance="light">
+    {ui}
+  </ThemeProvider>,
+);
 
 const createStickerSheet = (): GeneratedImage => ({
   id: 'sheet-1',
@@ -61,7 +69,7 @@ describe('GalleryManager sticker canvas restore behavior', () => {
     const onAddBatch = vi.fn();
     const onClose = vi.fn();
 
-    render(
+    renderWithTheme(
       <GalleryManager
         history={[sheet]}
         onUpdateHistory={vi.fn()}
@@ -88,7 +96,7 @@ describe('GalleryManager sticker canvas restore behavior', () => {
     const onAddBatch = vi.fn();
     const onClose = vi.fn();
 
-    render(
+    renderWithTheme(
       <GalleryManager
         history={[sheet]}
         onUpdateHistory={vi.fn()}

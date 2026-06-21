@@ -17,6 +17,20 @@ import {
   createDefaultAPIProfile,
   normalizeAPIProfileForUI,
 } from '../domain/api-settings/profileModel';
+import {
+  Badge,
+  Box,
+  Button,
+  Card,
+  DialogShell,
+  Flex,
+  IconButton,
+  SelectField,
+  SwitchField,
+  Tabs,
+  Text,
+  TextFieldControl,
+} from './ui';
 
 interface Props {
   onConfigured?: () => void;
@@ -24,63 +38,23 @@ interface Props {
   lang?: 'en' | 'zh';
 }
 
-const officialApiGuides = [
-  {
-    id: 'openai',
-    title: { zh: 'OpenAI 兼容 API', en: 'OpenAI-Compatible API' },
-    description: {
-      zh: 'Base URL 按服务根地址填写，代码会自动拼接 chat/completions、images/generations、images/edits 和 models。',
-      en: 'Enter the service root. The app appends chat/completions, images/generations, images/edits, and models automatically.',
-    },
-    docsUrl: 'https://platform.openai.com/docs/api-reference',
-    keyUrl: 'https://platform.openai.com/api-keys',
-    endpoints: [
-      { label: { zh: '服务根地址', en: 'Service root' }, value: 'https://api.openai.com/v1' },
-      { label: { zh: '文本请求', en: 'Text request' }, value: '/chat/completions' },
-      { label: { zh: '图片请求', en: 'Image request' }, value: '/images/generations' },
-      { label: { zh: '参考图编辑', en: 'Image edits' }, value: '/images/edits' },
-      { label: { zh: '模型列表', en: 'Models list' }, value: '/models' },
-    ],
-    steps: {
-      zh: [
-        'Provider 选择 OpenAI',
-        'Base URL 填官方或中转站根地址，例如 https://api.example.com/v1',
-        '不要再填写 /chat/completions 或 /images/generations',
-        '如果图片服务只支持聊天接口，可把图片模式切到 Chat Completions',
-      ],
-      en: [
-        'Choose OpenAI as the provider',
-        'Use a root URL such as https://api.example.com/v1',
-        'Do not include /chat/completions or /images/generations',
-        'If image generation is routed through chat, switch image mode to Chat Completions',
-      ],
-    },
-  },
-];
-
-const PINNED_TEXT_MODELS = [
-  'gpt-5.4',
-  'gpt-5.5',
-];
-
-const PINNED_IMAGE_MODELS = [
-  'gpt-image-2',
-];
+const PINNED_TEXT_MODELS = ['gpt-5.4', 'gpt-5.5'];
+const PINNED_IMAGE_MODELS = ['gpt-image-2'];
 
 type SaveStatus = 'idle' | 'dirty' | 'saved';
 
-export default function ApiKeyConfig({ onClose, lang = 'zh' }: Props) {
+const normalizeSingleAPIProfile = (api: APIConfig): APIConfig => ({
+  ...normalizeAPIProfileForUI(api),
+  enabled: true,
+});
+
+export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Props) {
   const isZh = lang === 'zh';
   const [profiles, setProfiles] = useState<APIConfig[]>([]);
+  const [activeProfileId, setActiveProfileId] = useState<string>('');
   const [testingId, setTestingId] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<{ id: string; ok: boolean; msg: string } | null>(null);
-  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
-  const [draggedId, setDraggedId] = useState<string | null>(null);
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
-  const [editingNameId, setEditingNameId] = useState<string | null>(null);
-  const [editingNameValue, setEditingNameValue] = useState('');
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
-  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
   const [fetchedModels, setFetchedModels] = useState<Record<string, string[]>>({});
   const [fetchingModelsId, setFetchingModelsId] = useState<string | null>(null);
   const [fetchErrors, setFetchErrors] = useState<Record<string, string>>({});
@@ -89,44 +63,25 @@ export default function ApiKeyConfig({ onClose, lang = 'zh' }: Props) {
 
   useEffect(() => {
     const settings = getAPISettings();
-    setProfiles(settings.profiles.length > 0
-      ? settings.profiles.map(normalizeAPIProfileForUI)
-      : [createDefaultAPIProfile()]);
+    const loaded = settings.profiles.length > 0
+      ? [normalizeSingleAPIProfile(settings.profiles[0])]
+      : [createDefaultAPIProfile()];
+    setProfiles(loaded);
+    setActiveProfileId(loaded[0]?.id || '');
     setSaveStatus('idle');
   }, []);
 
-  const markDirty = () => {
-    setSaveStatus('dirty');
-  };
+  const activeProfile = profiles.find(profile => profile.id === activeProfileId) || profiles[0] || null;
+
+  const markDirty = () => setSaveStatus('dirty');
 
   const persist = () => {
-    saveAPISettings({ profiles });
+    saveAPISettings({
+      profiles: activeProfile
+        ? [normalizeSingleAPIProfile(activeProfile)]
+        : profiles.slice(0, 1).map(normalizeSingleAPIProfile),
+    });
     setSaveStatus('saved');
-  };
-
-  const resetFetchedModels = (id: string) => {
-    setFetchedModels(prev => {
-      const next = { ...prev };
-      delete next[id];
-      return next;
-    });
-    setFetchErrors(prev => {
-      const next = { ...prev };
-      delete next[id];
-      return next;
-    });
-    delete fetchedSignaturesRef.current[id];
-  };
-
-  const handleAdd = () => {
-    setProfiles(prev => [...prev, createDefaultAPIProfile()]);
-    markDirty();
-  };
-
-  const handleRemove = (id: string) => {
-    setProfiles(prev => prev.filter(api => api.id !== id));
-    resetFetchedModels(id);
-    markDirty();
   };
 
   const handleUpdate = (id: string, updates: Partial<APIConfig>) => {
@@ -135,7 +90,7 @@ export default function ApiKeyConfig({ onClose, lang = 'zh' }: Props) {
     if (trimmed.apiKey !== undefined) trimmed.apiKey = trimmed.apiKey.trim().replace(/\s+/g, '');
     if (trimmed.textModel !== undefined) trimmed.textModel = trimmed.textModel.trim().replace(/\s+/g, '');
     if (trimmed.imageModel !== undefined) trimmed.imageModel = trimmed.imageModel.trim().replace(/\s+/g, '');
-    setProfiles(prev => prev.map(api => api.id === id ? normalizeAPIProfileForUI({ ...api, ...trimmed }) : api));
+    setProfiles(prev => prev.map(api => api.id === id ? normalizeSingleAPIProfile({ ...api, ...trimmed }) : api));
     markDirty();
   };
 
@@ -172,67 +127,7 @@ export default function ApiKeyConfig({ onClose, lang = 'zh' }: Props) {
 
   const handleSaveAll = () => {
     persist();
-  };
-
-  const toggleCollapse = (id: string) => {
-    setCollapsedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const handleDragStart = (event: React.DragEvent, id: string) => {
-    setDraggedId(id);
-    event.dataTransfer.effectAllowed = 'move';
-    (event.currentTarget as HTMLElement).style.opacity = '0.5';
-  };
-
-  const handleDragEnd = (event: React.DragEvent) => {
-    setDraggedId(null);
-    setDragOverId(null);
-    (event.currentTarget as HTMLElement).style.opacity = '1';
-  };
-
-  const handleDragOver = (event: React.DragEvent, id: string) => {
-    event.preventDefault();
-    if (id !== draggedId) setDragOverId(id);
-  };
-
-  const handleDrop = (targetId: string) => {
-    if (!draggedId || draggedId === targetId) return;
-    setProfiles(prev => {
-      const fromIndex = prev.findIndex(api => api.id === draggedId);
-      const toIndex = prev.findIndex(api => api.id === targetId);
-      if (fromIndex === -1 || toIndex === -1) return prev;
-      const next = [...prev];
-      const [removed] = next.splice(fromIndex, 1);
-      next.splice(toIndex, 0, removed);
-      return next;
-    });
-    markDirty();
-    setDraggedId(null);
-    setDragOverId(null);
-  };
-
-  const startRename = (api: APIConfig) => {
-    setEditingNameId(api.id);
-    setEditingNameValue(api.name);
-  };
-
-  const commitRename = (id: string) => {
-    if (editingNameValue.trim()) handleUpdate(id, { name: editingNameValue.trim() });
-    setEditingNameId(null);
-  };
-
-  const toggleKeyVisibility = (id: string) => {
-    setVisibleKeys(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    onConfigured?.();
   };
 
   const fetchModelsForApi = useCallback(async (api: APIConfig, force = false) => {
@@ -257,9 +152,6 @@ export default function ApiKeyConfig({ onClose, lang = 'zh' }: Props) {
       });
       if (!res.ok) {
         const errText = await res.text().catch(() => '');
-        if ([404, 405, 501].includes(res.status)) {
-          throw new Error(isZh ? '当前服务不支持 /models，可手动选择模型' : 'This service does not support /models. Select a model manually.');
-        }
         throw new Error(`HTTP ${res.status}${errText ? `: ${errText}` : ''}`);
       }
       const data = await res.json();
@@ -270,525 +162,267 @@ export default function ApiKeyConfig({ onClose, lang = 'zh' }: Props) {
 
       setFetchedModels(prev => ({ ...prev, [api.id]: models }));
       fetchedSignaturesRef.current[api.id] = signature;
-      if (models.length === 0) {
-        setFetchErrors(prev => ({
-          ...prev,
-          [api.id]: isZh
-            ? '模型列表已返回，但没有支持的模型（仅支持 gpt-5.4 / gpt-5.5 / gpt-image-2）'
-            : 'Models returned, but none are supported (gpt-5.4 / gpt-5.5 / gpt-image-2 only)',
-        }));
-      }
     } catch (error: any) {
-      const message = error?.name === 'TypeError' || /failed to fetch|network/i.test(error?.message || '')
-        ? (isZh ? '网络请求失败，请检查 Base URL、代理或跨域设置' : 'Network request failed. Check Base URL, proxy, or CORS settings.')
-        : (error.message || (isZh ? '获取模型列表失败' : 'Failed to fetch models'));
-      setFetchErrors(prev => ({ ...prev, [api.id]: message }));
+      setFetchErrors(prev => ({ ...prev, [api.id]: error.message || (isZh ? '获取模型列表失败' : 'Failed to fetch models') }));
     } finally {
       setFetchingModelsId(null);
     }
   }, [isZh]);
 
-  useEffect(() => {
-    profiles.forEach(api => {
-      if (!api.apiKey.trim()) return;
-      const signature = `${api.provider}|${api.baseUrl.trim()}|${api.apiKey.trim()}`;
-      if (fetchedSignaturesRef.current[api.id] !== signature) {
-        fetchModelsForApi(api, false);
-      }
-    });
-  }, [profiles, fetchModelsForApi]);
-
-  const getModelOptions = (_api: APIConfig, kind: 'text' | 'image'): string[] => {
-    return kind === 'text' ? TEXT_MODEL_PRESETS : IMAGE_MODEL_PRESETS;
-  };
-
-  const inputCls = 'w-full px-2.5 py-1.5 bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 rounded-lg text-stone-900 dark:text-white text-xs placeholder-stone-400 dark:placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent';
-  const selectCls = 'w-full px-2.5 py-1.5 bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 rounded-lg text-stone-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent appearance-none';
-  const labelCls = 'block text-[10px] font-medium text-stone-500 dark:text-stone-400 mb-0.5 uppercase tracking-wider';
-  const toggleCls = 'flex items-center gap-2 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 px-2.5 py-2 text-xs text-stone-600 dark:text-stone-300';
-
-  const renderModelField = (api: APIConfig, kind: 'text' | 'image') => {
-    const isText = kind === 'text';
-    const label = isText ? (isZh ? '文本模型' : 'Text Model') : (isZh ? '图片模型' : 'Image Model');
-    const value = isText ? api.textModel || '' : api.imageModel || '';
-    const pinned = isText ? PINNED_TEXT_MODELS : PINNED_IMAGE_MODELS;
-
-    return (
-      <div>
-        <label className={labelCls}>{label}</label>
-        <select
-          value={value}
-          onChange={event => handleUpdate(api.id, isText ? { textModel: event.target.value } : { imageModel: event.target.value })}
-          className={selectCls}
-        >
-          <option value="">{isZh ? '选择模型...' : 'Select model...'}</option>
-          {getModelOptions(api, kind).map(model => (
-            <option key={model} value={model}>
-              {model} {pinned.includes(model) ? '*' : ''}
-            </option>
-          ))}
-        </select>
-      </div>
-    );
-  };
+  const modelOptions = (kind: 'text' | 'image') => (
+    (kind === 'text' ? TEXT_MODEL_PRESETS : IMAGE_MODEL_PRESETS).map(model => ({
+      value: model,
+      label: `${model} ${(kind === 'text' ? PINNED_TEXT_MODELS : PINNED_IMAGE_MODELS).includes(model) ? '*' : ''}`,
+    }))
+  );
 
   const renderEndpointPreview = (api: APIConfig) => {
     const normalized = normalizeOpenAIBaseUrl(api.baseUrl);
+    const endpoints = [
+      [isZh ? '文本' : 'Text', buildOpenAICompatibleUrl(api.baseUrl, 'chat/completions')],
+      [isZh ? '图片' : 'Image', buildOpenAICompatibleUrl(api.baseUrl, 'images/generations')],
+      [isZh ? '编辑' : 'Edits', buildOpenAICompatibleUrl(api.baseUrl, 'images/edits')],
+    ];
+
     return (
-      <div className="text-[10px] text-stone-400 dark:text-stone-500 leading-relaxed mt-1 space-y-0.5">
-        <div>{isZh ? '标准化根地址' : 'Normalized root'}: <code className="break-all">{normalized}</code></div>
-        <div>{isZh ? '文本' : 'Text'}: <code className="break-all">{buildOpenAICompatibleUrl(api.baseUrl, 'chat/completions')}</code></div>
-        <div>{isZh ? '图片' : 'Image'}: <code className="break-all">{buildOpenAICompatibleUrl(api.baseUrl, 'images/generations')}</code></div>
-        <div>{isZh ? '参考图' : 'Image edits'}: <code className="break-all">{buildOpenAICompatibleUrl(api.baseUrl, 'images/edits')}</code></div>
-      </div>
+      <Card variant="surface" className="mt-3">
+        <Text size="1" weight="bold" color="gray">{isZh ? '配置说明与端点预览' : 'Configuration notes and endpoints'}</Text>
+        <Text as="p" size="1" color="gray" mt="2">
+          {isZh
+            ? 'Base URL 只填写服务根地址，MuseUI 会自动拼接文本、图片、参考图编辑和模型列表端点。不要在这里填写 /chat/completions、/images/generations 或 /models。'
+            : 'Enter only the service root. MuseUI appends text, image, image-edit, and model-list endpoints automatically. Do not include /chat/completions, /images/generations, or /models here.'}
+        </Text>
+        <Box mt="2" className="space-y-1">
+          <Text as="p" size="1" color="gray">{isZh ? '标准化根地址' : 'Normalized root'}: <code className="break-all">{normalized}</code></Text>
+          {endpoints.map(([label, value]) => (
+            <Text key={label} as="p" size="1" color="gray">
+              {label}: <code className="break-all">{value}</code>
+            </Text>
+          ))}
+        </Box>
+        <Flex gap="2" mt="3" wrap="wrap">
+          <Button asChild size="1" variant="soft">
+            <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">Key</a>
+          </Button>
+          <Button asChild size="1" variant="soft">
+            <a href="https://platform.openai.com/docs/api-reference" target="_blank" rel="noopener noreferrer">{isZh ? '文档' : 'Docs'}</a>
+          </Button>
+        </Flex>
+      </Card>
     );
   };
 
-  const renderAPICard = (api: APIConfig, index: number) => {
-    const isCollapsed = collapsedIds.has(api.id);
-    const isDragOver = dragOverId === api.id && draggedId !== api.id;
-    const isEditingName = editingNameId === api.id;
+  const renderProfileEditor = (api: APIConfig) => {
     const isKeyVisible = visibleKeys.has(api.id);
+    const testTextRunning = testingId === `${api.id}:text`;
+    const testImageRunning = testingId === `${api.id}:image`;
     const isFetchingModels = fetchingModelsId === api.id;
-    const displayName = api.name || (isZh ? '未命名 Profile' : 'Unnamed Profile');
 
     return (
-      <div
-        key={api.id}
-        draggable
-        onDragStart={event => handleDragStart(event, api.id)}
-        onDragEnd={handleDragEnd}
-        onDragOver={event => handleDragOver(event, api.id)}
-        onDrop={() => handleDrop(api.id)}
-        className={`border rounded-xl transition-all ${isDragOver ? 'border-teal-400 dark:border-teal-500 ring-2 ring-teal-200 dark:ring-teal-900/40' : 'border-stone-200 dark:border-stone-700'} bg-stone-50 dark:bg-stone-800/50`}
-      >
-        <div className="flex items-center gap-2 px-3 py-2 cursor-grab active:cursor-grabbing">
-          <div className="text-stone-400 dark:text-stone-500 shrink-0" aria-hidden="true">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="9" cy="6" r="1.5" />
-              <circle cx="9" cy="12" r="1.5" />
-              <circle cx="9" cy="18" r="1.5" />
-              <circle cx="15" cy="6" r="1.5" />
-              <circle cx="15" cy="12" r="1.5" />
-              <circle cx="15" cy="18" r="1.5" />
-            </svg>
-          </div>
-          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${index === 0 ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400' : 'bg-stone-200 dark:bg-stone-700 text-stone-500 dark:text-stone-400'}`}>
-            {index + 1}
-          </span>
-          <div className="flex-1 min-w-0">
-            {isEditingName ? (
-              <input
-                autoFocus
-                value={editingNameValue}
-                onChange={event => setEditingNameValue(event.target.value)}
-                onBlur={() => commitRename(api.id)}
-                onKeyDown={event => {
-                  if (event.key === 'Enter') commitRename(api.id);
-                  if (event.key === 'Escape') setEditingNameId(null);
-                }}
-                className="w-full text-xs font-bold bg-white dark:bg-stone-900 border border-teal-300 dark:border-teal-600 rounded px-1.5 py-0.5 text-stone-800 dark:text-stone-200 outline-none"
-              />
-            ) : (
-              <button
-                onClick={() => startRename(api)}
-                className="text-xs font-bold text-stone-700 dark:text-stone-300 truncate hover:text-teal-600 dark:hover:text-teal-400 transition-colors text-left w-full"
-                title={isZh ? '点击重命名' : 'Click to rename'}
-              >
-                {displayName}
-              </button>
-            )}
-            <div className="flex items-center gap-1 mt-0.5">
-              <span className="text-[10px] text-stone-400 dark:text-stone-500">OpenAI-compatible</span>
-              {api.textEnabled && <span className="text-[9px] px-1 rounded bg-cyan-100 text-cyan-700 dark:bg-cyan-950/50 dark:text-cyan-300">{isZh ? '文本' : 'Text'}</span>}
-              {api.imageEnabled && <span className="text-[9px] px-1 rounded bg-teal-100 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300">{isZh ? '图片' : 'Image'}</span>}
-            </div>
-          </div>
-          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${api.enabled ? 'bg-green-500' : 'bg-stone-300 dark:bg-stone-600'}`} title={api.enabled ? (isZh ? '已启用' : 'Enabled') : (isZh ? '已禁用' : 'Disabled')} />
-          <div className="flex items-center gap-0.5 shrink-0">
-            <button
-              onClick={() => handleTest('text', api)}
-              disabled={testingId === `${api.id}:text` || !api.apiKey.trim() || !api.textEnabled}
-              className="text-[10px] min-w-[52px] px-2 py-1 rounded bg-white dark:bg-stone-900 hover:bg-stone-200 dark:hover:bg-stone-600 disabled:opacity-40 text-stone-500 dark:text-stone-400 transition-colors"
-              title={isZh ? '测试文本' : 'Test text'}
-            >
-              {testingId === `${api.id}:text` ? (isZh ? '测试中' : 'Testing') : (isZh ? '测试文本' : 'Text')}
-            </button>
-            <button
-              onClick={() => handleTest('image', api)}
-              disabled={testingId === `${api.id}:image` || !api.apiKey.trim() || !api.imageEnabled}
-              className="text-[10px] min-w-[52px] px-2 py-1 rounded bg-white dark:bg-stone-900 hover:bg-stone-200 dark:hover:bg-stone-600 disabled:opacity-40 text-stone-500 dark:text-stone-400 transition-colors"
-              title={isZh ? '测试图片' : 'Test image'}
-            >
-              {testingId === `${api.id}:image` ? (isZh ? '测试中' : 'Testing') : (isZh ? '测试图片' : 'Image')}
-            </button>
-            <button
-              onClick={() => toggleCollapse(api.id)}
-              className="p-1 text-stone-400 dark:text-stone-500 hover:text-stone-600 dark:hover:text-stone-300 transition-colors"
-              title={isCollapsed ? (isZh ? '展开' : 'Expand') : (isZh ? '收起' : 'Collapse')}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>
-                <path d="M6 9l6 6 6-6" />
-              </svg>
-            </button>
-            <button
-              onClick={() => setDeleteConfirm({ id: api.id, name: displayName })}
-              className="p-1 text-stone-400 dark:text-stone-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-              title={isZh ? '删除' : 'Remove'}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
+      <Card className="min-w-0">
+        <Flex direction="column" gap="4">
+          <Card variant="surface">
+            <Flex direction="column" gap="3">
+              <Flex align="start" justify="between" gap="3">
+                <Box>
+                  <Text size="3" weight="bold">{isZh ? 'API 配置' : 'API configuration'}</Text>
+                  <Text as="p" size="1" color="gray" mt="1">
+                    {isZh
+                      ? '当前项目使用单一 OpenAI-compatible 配置。文本思考和图片生成可以分别启用。'
+                      : 'This project uses a single OpenAI-compatible configuration. Text and image requests can be enabled separately.'}
+                  </Text>
+                </Box>
+                <Badge color="green">{isZh ? '已启用' : 'Enabled'}</Badge>
+              </Flex>
+              <Flex direction={{ initial: 'column', sm: 'row' }} gap="3">
+                <Box className="flex-1">
+                  <SwitchField
+                    label={isZh ? '用于文本思考' : 'Use for text'}
+                    checked={Boolean(api.textEnabled)}
+                    onCheckedChange={checked => handleUpdate(api.id, { textEnabled: checked })}
+                  />
+                </Box>
+                <Box className="flex-1">
+                  <SwitchField
+                    label={isZh ? '用于图片生成' : 'Use for images'}
+                    checked={Boolean(api.imageEnabled)}
+                    onCheckedChange={checked => handleUpdate(api.id, { imageEnabled: checked })}
+                  />
+                </Box>
+              </Flex>
+            </Flex>
+          </Card>
 
-        {testResult?.id === api.id && (
-          <div className={`px-3 pb-2 text-[10px] ${testResult.ok ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
-            {testResult.msg}
-          </div>
-        )}
+          <TextFieldControl
+            label={isZh ? 'Base URL（服务根地址）' : 'Base URL (service root)'}
+            value={api.baseUrl}
+            onValueChange={value => handleUpdate(api.id, { baseUrl: value })}
+            placeholder="https://api.openai.com/v1"
+          />
+          {renderEndpointPreview(api)}
 
-        {!isCollapsed && (
-          <div className="px-3 pb-3 space-y-3">
-            <div className="h-px bg-stone-200 dark:bg-stone-700" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <div>
-                <label className={labelCls}>{isZh ? '协议' : 'Protocol'}</label>
-                <div className={`${toggleCls} h-[31px]`}>
-                  OpenAI-compatible
-                </div>
-              </div>
-              <div>
-                <label className={labelCls}>{isZh ? '总开关' : 'Profile'}</label>
-                <label className={`${toggleCls} h-[31px]`}>
-                  <input
-                    type="checkbox"
-                    checked={api.enabled}
-                    onChange={event => handleUpdate(api.id, { enabled: event.target.checked })}
-                    className="accent-teal-500"
-                  />
-                  {isZh ? '启用此 Profile' : 'Enabled'}
-                </label>
-              </div>
-              <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <label className={toggleCls}>
-                  <input
-                    type="checkbox"
-                    checked={api.textEnabled}
-                    onChange={event => handleUpdate(api.id, { textEnabled: event.target.checked })}
-                    className="accent-cyan-500"
-                  />
-                  {isZh ? '用于文本思考' : 'Use for text'}
-                </label>
-                <label className={toggleCls}>
-                  <input
-                    type="checkbox"
-                    checked={api.imageEnabled}
-                    onChange={event => handleUpdate(api.id, { imageEnabled: event.target.checked })}
-                    className="accent-teal-500"
-                  />
-                  {isZh ? '用于图片生成' : 'Use for images'}
-                </label>
-              </div>
-              <div className="sm:col-span-2">
-                <label className={labelCls}>{isZh ? 'Base URL（服务根地址）' : 'Base URL (service root)'}</label>
-                <input
-                  type="text"
-                  value={api.baseUrl}
-                  onChange={event => handleUpdate(api.id, { baseUrl: event.target.value })}
-                  placeholder="https://api.openai.com/v1"
-                  className={inputCls}
+          <Box>
+            <Flex align="end" gap="2">
+              <Box className="min-w-0 flex-1">
+                <TextFieldControl
+                  label="API Key"
+                  value={api.apiKey}
+                  type={isKeyVisible ? 'text' : 'password'}
+                  onValueChange={value => handleUpdate(api.id, { apiKey: value })}
+                  placeholder="sk-..."
                 />
-                {renderEndpointPreview(api)}
-              </div>
-              <div className="sm:col-span-2">
-                <label className={labelCls}>API Key</label>
-                <div className="relative">
-                  <input
-                    type={isKeyVisible ? 'text' : 'password'}
-                    value={api.apiKey}
-                    onChange={event => handleUpdate(api.id, { apiKey: event.target.value })}
-                    placeholder="sk-... or AIza..."
-                    className={`${inputCls} pr-9`}
-                  />
-                  <button
-                    onClick={() => toggleKeyVisibility(api.id)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500 hover:text-stone-600 dark:hover:text-stone-300 transition-colors p-0.5"
-                    title={isKeyVisible ? (isZh ? '隐藏' : 'Hide') : (isZh ? '显示' : 'Show')}
-                  >
-                    {isKeyVisible ? (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    ) : (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                        <line x1="1" y1="1" x2="23" y2="23" />
-                      </svg>
-                    )}
-                  </button>
-                </div>
-              </div>
-              <div className="sm:col-span-2">
-                <div className="flex items-center justify-between gap-2">
-                  <label className={labelCls}>{isZh ? '模型列表' : 'Models'}</label>
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    {fetchErrors[api.id] && (
-                      <span className="text-[10px] text-red-500 dark:text-red-400 truncate max-w-[220px]" title={fetchErrors[api.id]}>
-                        {fetchErrors[api.id]}
-                      </span>
-                    )}
-                    {fetchedModels[api.id] && !fetchErrors[api.id] && (
-                      <span className="text-[10px] text-green-600 dark:text-green-400">
-                        {isZh ? `已获取 ${fetchedModels[api.id].length} 个模型` : `${fetchedModels[api.id].length} models fetched`}
-                      </span>
-                    )}
-                    <button
-                      onClick={() => fetchModelsForApi(api, true)}
+              </Box>
+              <IconButton
+                iconName={isKeyVisible ? 'info' : 'search'}
+                label={isKeyVisible ? (isZh ? '隐藏 Key' : 'Hide key') : (isZh ? '显示 Key' : 'Show key')}
+                variant="soft"
+                color="gray"
+                onClick={() => {
+                  setVisibleKeys(prev => {
+                    const next = new Set(prev);
+                    if (next.has(api.id)) next.delete(api.id);
+                    else next.add(api.id);
+                    return next;
+                  });
+                }}
+              />
+            </Flex>
+          </Box>
+
+          <Tabs.Root defaultValue="models">
+            <Tabs.List>
+              <Tabs.Trigger value="models">{isZh ? '模型' : 'Models'}</Tabs.Trigger>
+              <Tabs.Trigger value="imageMode">{isZh ? '图片模式' : 'Image mode'}</Tabs.Trigger>
+              <Tabs.Trigger value="test">{isZh ? '测试' : 'Test'}</Tabs.Trigger>
+            </Tabs.List>
+
+            <Box pt="4">
+              <Tabs.Content value="models">
+                <Flex direction="column" gap="3">
+                  <Flex align="center" justify="between" gap="3">
+                    <Box className="min-w-0">
+                      <Text size="2" weight="bold">{isZh ? '模型列表' : 'Model list'}</Text>
+                      <Text as="p" size="1" color="gray">
+                        {fetchedModels[api.id] && !fetchErrors[api.id]
+                          ? (isZh ? `已获取 ${fetchedModels[api.id].length} 个支持模型` : `${fetchedModels[api.id].length} supported models fetched`)
+                          : (isZh ? '当前仅允许固定模型预设。' : 'Only pinned model presets are selectable.')}
+                      </Text>
+                      {fetchErrors[api.id] && <Text as="p" size="1" color="red" className="break-all">{fetchErrors[api.id]}</Text>}
+                    </Box>
+                    <Button
+                      size="2"
+                      variant="soft"
+                      color="gray"
+                      iconName={isFetchingModels ? 'loader' : 'refresh'}
                       disabled={isFetchingModels || !api.apiKey.trim()}
-                      className="text-stone-400 dark:text-stone-500 hover:text-teal-600 dark:hover:text-teal-400 disabled:opacity-40 transition-colors p-0.5"
-                      title={isZh ? '刷新模型列表' : 'Refresh model list'}
+                      onClick={() => fetchModelsForApi(api, true)}
                     >
-                      {isFetchingModels ? (
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin">
-                          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                        </svg>
-                      ) : (
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="23 4 23 10 17 10" />
-                          <polyline points="1 20 1 14 7 14" />
-                          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-                        </svg>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-              {renderModelField(api, 'text')}
-              {renderModelField(api, 'image')}
-              <div className="sm:col-span-2">
-                <label className={labelCls}>{isZh ? '图片请求模式' : 'Image request mode'}</label>
-                <select
+                      {isZh ? '刷新' : 'Refresh'}
+                    </Button>
+                  </Flex>
+                  <Flex direction={{ initial: 'column', sm: 'row' }} gap="3">
+                    <Box className="flex-1">
+                      <SelectField
+                        label={isZh ? '文本模型' : 'Text model'}
+                        value={api.textModel || ''}
+                        onValueChange={value => handleUpdate(api.id, { textModel: value })}
+                        options={modelOptions('text')}
+                        placeholder={isZh ? '选择文本模型' : 'Select text model'}
+                      />
+                    </Box>
+                    <Box className="flex-1">
+                      <SelectField
+                        label={isZh ? '图片模型' : 'Image model'}
+                        value={api.imageModel || ''}
+                        onValueChange={value => handleUpdate(api.id, { imageModel: value })}
+                        options={modelOptions('image')}
+                        placeholder={isZh ? '选择图片模型' : 'Select image model'}
+                      />
+                    </Box>
+                  </Flex>
+                </Flex>
+              </Tabs.Content>
+
+              <Tabs.Content value="imageMode">
+                <SelectField
+                  label={isZh ? '图片请求模式' : 'Image request mode'}
                   value={api.imageMode || 'auto'}
-                  onChange={event => handleUpdate(api.id, { imageMode: event.target.value as OpenAIImageMode })}
-                  className={selectCls}
-                >
-                  <option value="auto">{isZh ? '自动：先 images/generations，必要时回退 chat/completions' : 'Auto: images first, fallback to chat'}</option>
-                  <option value="images">{isZh ? 'Images API：/images/generations' : 'Images API: /images/generations'}</option>
-                  <option value="chat">{isZh ? 'Chat Completions：/chat/completions' : 'Chat Completions: /chat/completions'}</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+                  onValueChange={value => handleUpdate(api.id, { imageMode: value as OpenAIImageMode })}
+                  options={[
+                    { value: 'auto', label: isZh ? '自动：先 images/generations，必要时回退 chat/completions' : 'Auto: images first, fallback to chat' },
+                    { value: 'images', label: isZh ? 'Images API：/images/generations' : 'Images API: /images/generations' },
+                    { value: 'chat', label: isZh ? 'Chat Completions：/chat/completions' : 'Chat Completions: /chat/completions' },
+                  ]}
+                />
+              </Tabs.Content>
+
+              <Tabs.Content value="test">
+                <Flex direction="column" gap="3">
+                  <Flex gap="2" wrap="wrap">
+                    <Button
+                      variant="soft"
+                      color="cyan"
+                      disabled={testTextRunning || !api.apiKey.trim() || !api.textEnabled}
+                      onClick={() => handleTest('text', api)}
+                    >
+                      {testTextRunning ? (isZh ? '测试中...' : 'Testing...') : (isZh ? '测试文本' : 'Test text')}
+                    </Button>
+                    <Button
+                      variant="soft"
+                      color="ruby"
+                      disabled={testImageRunning || !api.apiKey.trim() || !api.imageEnabled}
+                      onClick={() => handleTest('image', api)}
+                    >
+                      {testImageRunning ? (isZh ? '测试中...' : 'Testing...') : (isZh ? '测试图片' : 'Test image')}
+                    </Button>
+                  </Flex>
+                  {testResult?.id === api.id && (
+                    <Card variant="surface">
+                      <Text size="2" color={testResult.ok ? 'green' : 'red'} className="break-all">{testResult.msg}</Text>
+                    </Card>
+                  )}
+                </Flex>
+              </Tabs.Content>
+            </Box>
+          </Tabs.Root>
+        </Flex>
+      </Card>
     );
   };
+
+  const footer = (
+    <>
+      <Text size="1" color="gray" className="mr-auto">
+        {saveStatus === 'dirty'
+          ? (isZh ? '有未保存更改' : 'Unsaved changes')
+          : saveStatus === 'saved'
+            ? (isZh ? '已保存到浏览器本地' : 'Saved locally')
+            : (isZh ? 'API Key 仅保存在浏览器本地' : 'API keys are stored locally only')}
+      </Text>
+      <Button variant="soft" color="gray" onClick={onClose}>{isZh ? '关闭' : 'Close'}</Button>
+      <Button onClick={handleSaveAll} color="ruby" iconName="save">{isZh ? '保存' : 'Save'}</Button>
+    </>
+  );
 
   return (
-    <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-0 sm:p-4" onClick={onClose}>
-      <div className="bg-white dark:bg-stone-800 rounded-none sm:rounded-2xl border border-stone-200 dark:border-stone-700 w-full sm:w-[92%] lg:w-[80%] shadow-2xl flex flex-col h-[100dvh] max-h-[100dvh] sm:h-[90vh] sm:max-h-[90vh]" onClick={event => event.stopPropagation()}>
-        <div className="flex items-center justify-between px-4 py-4 sm:px-6 border-b border-stone-200 dark:border-stone-700 shrink-0">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-lg flex items-center justify-center text-white text-sm">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                <line x1="6" y1="12" x2="18" y2="12" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="text-stone-900 dark:text-white font-bold text-sm">{isZh ? 'API 设置' : 'API Settings'}</h2>
-              <p className="text-stone-500 text-xs leading-relaxed">
-                {isZh ? '一个 Profile 统一管理 Key、根地址、文本模型和图片模型' : 'One profile manages key, root URL, text model, and image model'}
-              </p>
-            </div>
-          </div>
-          {onClose && (
-            <button onClick={onClose} className="text-stone-400 dark:text-stone-500 hover:text-stone-600 dark:hover:text-stone-300 transition-colors p-1">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
+    <>
+      <DialogShell
+        open
+        onOpenChange={(open) => { if (!open) onClose?.(); }}
+        title={isZh ? 'API 设置' : 'API Settings'}
+        description={isZh ? '配置单一 OpenAI-compatible API，用于文本思考和图片生成。' : 'Configure one OpenAI-compatible API for text reasoning and image generation.'}
+        size="lg"
+        footer={footer}
+        closeLabel={isZh ? '关闭 API 设置' : 'Close API settings'}
+      >
+        <Box data-api-config-body className="mx-auto max-h-[calc(100dvh-180px)] min-h-0 max-w-3xl overflow-y-auto pr-1">
+          {activeProfile ? renderProfileEditor(activeProfile) : (
+            <Card>
+              <Text color="gray">{isZh ? '暂无 API 配置' : 'No API configuration found'}</Text>
+            </Card>
           )}
-        </div>
-
-        <div data-api-config-body className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden px-4 py-4 sm:px-6 sm:py-5">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6 lg:min-h-0 lg:h-full">
-            <div className="lg:col-span-2 flex flex-col lg:h-full lg:min-h-0">
-              <div className="flex items-center justify-between shrink-0 mb-3">
-                <div>
-                  <h3 className="text-sm font-bold text-stone-700 dark:text-stone-200">{isZh ? 'API Profiles' : 'API Profiles'}</h3>
-                  <p className="text-[11px] text-stone-400 dark:text-stone-500 mt-1">
-                    {isZh ? '按顺序 fallback；每个 Profile 可单独控制文本和图片用途。' : 'Fallback follows this order; text and image usage can be toggled per profile.'}
-                  </p>
-                </div>
-                <button
-                  onClick={handleAdd}
-                  className="text-[10px] px-2 py-1 rounded bg-stone-200 dark:bg-stone-700 hover:bg-stone-300 dark:hover:bg-stone-600 text-stone-600 dark:text-stone-300 transition-colors"
-                >
-                  + {isZh ? '添加' : 'Add'}
-                </button>
-              </div>
-              <div data-api-list="profiles" className="space-y-3 lg:overflow-y-auto lg:pr-1 custom-scrollbar">
-                {profiles.map((api, index) => renderAPICard(api, index))}
-              </div>
-              {profiles.length === 0 && (
-                <div className="text-center text-stone-400 dark:text-stone-500 text-xs py-8 border border-dashed border-stone-300 dark:border-stone-700 rounded-xl">
-                  {isZh ? '暂无配置，点击添加' : 'No profiles configured'}
-                </div>
-              )}
-            </div>
-
-            <div className="lg:col-span-1 flex flex-col lg:h-full lg:min-h-0 lg:overflow-hidden">
-              <div data-api-guide className="space-y-4 pb-3 lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1 custom-scrollbar">
-                <div>
-                  <h3 className="text-sm font-bold text-stone-700 dark:text-stone-200 mb-2">
-                    {isZh ? '配置规则' : 'Configuration Rules'}
-                  </h3>
-                  <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
-                    {isZh
-                      ? 'Base URL 现在统一表示服务根地址。OpenAI 兼容服务不再需要分别配置文本端点和图片端点。'
-                      : 'Base URL now always means the service root. OpenAI-compatible services no longer need separate text and image endpoints.'}
-                  </p>
-                </div>
-
-                <div className="space-y-3">
-                  {officialApiGuides.map(guide => (
-                    <details
-                      key={guide.id}
-                      className="rounded-xl border border-teal-200 dark:border-teal-900/50 bg-teal-50/70 dark:bg-teal-950/20"
-                    >
-                      <summary className="cursor-pointer select-none px-3 py-2 text-xs font-bold text-stone-800 dark:text-stone-100 hover:text-teal-700 dark:hover:text-teal-300 transition-colors">
-                        {isZh ? guide.title.zh : guide.title.en}
-                      </summary>
-                      <div className="px-3 pb-3">
-                        <p className="text-[10px] text-stone-500 dark:text-stone-400 leading-relaxed mt-1">
-                          {isZh ? guide.description.zh : guide.description.en}
-                        </p>
-                        <div className="flex gap-1 shrink-0 mt-2 mb-2">
-                          <a
-                            href={guide.keyUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[10px] px-1.5 py-0.5 rounded bg-white dark:bg-stone-900 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 hover:bg-teal-100 dark:hover:bg-teal-900/40 transition-colors"
-                          >
-                            Key
-                          </a>
-                          <a
-                            href={guide.docsUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[10px] px-1.5 py-0.5 rounded bg-white dark:bg-stone-900 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 hover:bg-teal-100 dark:hover:bg-teal-900/40 transition-colors"
-                          >
-                            {isZh ? '文档' : 'Docs'}
-                          </a>
-                        </div>
-
-                        <div className="space-y-1.5 mb-2">
-                          {guide.endpoints.map(endpoint => (
-                            <div key={`${guide.id}-${endpoint.value}`} className="text-[10px] leading-relaxed">
-                              <span className="text-stone-500 dark:text-stone-400">
-                                {isZh ? endpoint.label.zh : endpoint.label.en}:
-                              </span>
-                              <code className="block mt-0.5 px-2 py-1 rounded bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-[10px] text-stone-700 dark:text-stone-200 break-all">
-                                {endpoint.value}
-                              </code>
-                            </div>
-                          ))}
-                        </div>
-
-                        <ol className="text-[10px] text-stone-600 dark:text-stone-300 leading-relaxed space-y-1 list-decimal list-inside">
-                          {(isZh ? guide.steps.zh : guide.steps.en).map(step => (
-                            <li key={step}>{step}</li>
-                          ))}
-                        </ol>
-                      </div>
-                    </details>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div
-          className="sticky bottom-0 z-20 px-4 py-3 sm:px-6 border-t border-stone-200 dark:border-stone-700 bg-white/95 dark:bg-stone-800/95 backdrop-blur flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0"
-          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
-        >
-          <div className="min-w-0">
-            <p className="text-stone-400 dark:text-stone-500 text-[10px]">
-              {isZh ? 'API Key 仅保存在浏览器本地' : 'API Keys are stored locally in your browser only'}
-            </p>
-            <div className="mt-1 flex items-center gap-1.5 text-[11px]">
-              {saveStatus === 'dirty' && (
-                <>
-                  <span className="h-2 w-2 rounded-full bg-amber-500" />
-                  <span className="font-medium text-amber-600 dark:text-amber-400">{isZh ? '有未保存更改' : 'Unsaved changes'}</span>
-                </>
-              )}
-              {saveStatus === 'saved' && (
-                <>
-                  <span className="h-2 w-2 rounded-full bg-green-500" />
-                  <span className="font-medium text-green-600 dark:text-green-400">{isZh ? '已保存' : 'Saved'}</span>
-                </>
-              )}
-              {saveStatus === 'idle' && (
-                <span className="text-stone-400 dark:text-stone-500">{isZh ? '当前无待保存更改' : 'No pending changes'}</span>
-              )}
-            </div>
-          </div>
-          <div className="flex gap-2 sm:justify-end">
-            <button
-              onClick={handleSaveAll}
-              className="w-full sm:w-auto px-5 py-2 bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium rounded-lg transition-colors"
-            >
-              {isZh ? '保存' : 'Save'}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {deleteConfirm && (
-        <div className="fixed inset-0 z-[300] bg-black/50 flex items-center justify-center p-4" onClick={() => setDeleteConfirm(null)}>
-          <div className="bg-white dark:bg-stone-800 rounded-xl p-5 max-w-sm w-full shadow-2xl border border-stone-200 dark:border-stone-700" onClick={event => event.stopPropagation()}>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-500">
-                  <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                </svg>
-              </div>
-              <h3 className="text-sm font-bold text-stone-800 dark:text-white">
-                {isZh ? '确认删除' : 'Confirm Delete'}
-              </h3>
-            </div>
-            <p className="text-xs text-stone-500 dark:text-stone-400 mb-4">
-              {isZh
-                ? `确定要删除 API Profile「${deleteConfirm.name}」吗？此操作不可撤销。`
-                : `Are you sure you want to delete the API profile "${deleteConfirm.name}"? This cannot be undone.`}
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                className="px-3 py-1.5 text-xs text-stone-500 hover:text-stone-700 dark:hover:text-stone-300 transition-colors"
-              >
-                {isZh ? '取消' : 'Cancel'}
-              </button>
-              <button
-                onClick={() => {
-                  handleRemove(deleteConfirm.id);
-                  setDeleteConfirm(null);
-                }}
-                className="px-3 py-1.5 text-xs bg-red-500 hover:bg-red-400 text-white rounded-lg transition-colors"
-              >
-                {isZh ? '删除' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+        </Box>
+      </DialogShell>
+    </>
   );
 }

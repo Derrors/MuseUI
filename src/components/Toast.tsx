@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import IconLoader from './IconLoader';
+import { AlertDialogShell, Button, Card, Flex, Text } from './ui';
 
 export interface ToastMessage {
     id: string;
@@ -13,28 +14,27 @@ interface ToastContainerProps {
 }
 
 export const ToastContainer: React.FC<ToastContainerProps> = ({ notifications, onClose }) => {
+    const tone = (type: ToastMessage['type']) => {
+        if (type === 'success') return { color: 'var(--green-9)', icon: 'check' as const };
+        if (type === 'error') return { color: 'var(--red-9)', icon: 'x' as const };
+        return { color: 'var(--ruby-9)', icon: 'info' as const };
+    };
+
     return (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] flex flex-col gap-2 pointer-events-none w-full max-w-md items-center">
+        <div className="fixed top-4 left-1/2 z-[200] flex w-full max-w-md -translate-x-1/2 flex-col items-center gap-2 pointer-events-none px-3">
             {notifications.map(n => (
-                <div
+                <Card
                     key={n.id}
-                    className={`
-                        pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border backdrop-blur-md transition-all animate-in slide-in-from-top-2 fade-in
-                        ${n.type === 'success' ? 'bg-green-50/90 dark:bg-green-900/50 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200' : ''}
-                        ${n.type === 'error' ? 'bg-red-50/90 dark:bg-red-900/50 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200' : ''}
-                        ${n.type === 'info' ? 'bg-white/90 dark:bg-stone-800/90 border-stone-200 dark:border-stone-700 text-stone-800 dark:text-stone-200' : ''}
-                    `}
+                    className="pointer-events-auto w-full animate-in fade-in slide-in-from-top-2 shadow-xl"
                 >
-                    {n.type === 'success' && <IconLoader name="check" size={16} className="text-green-600 dark:text-green-400" />}
-                    {n.type === 'error' && <IconLoader name="x" size={16} className="text-red-600 dark:text-red-400" />}
-                    {n.type === 'info' && <IconLoader name="info" size={16} className="text-teal-600 dark:text-teal-400" />}
-
-                    <span className="text-sm font-medium flex-1">{n.message}</span>
-
-                    <button onClick={() => onClose(n.id)} className="ml-2 hover:opacity-70 p-1">
-                        <IconLoader name="x" size={14} />
-                    </button>
-                </div>
+                    <Flex align="center" gap="3">
+                        <IconLoader name={tone(n.type).icon} size={16} style={{ color: tone(n.type).color } as React.CSSProperties} />
+                        <Text size="2" weight="medium" className="min-w-0 flex-1">{n.message}</Text>
+                        <Button onClick={() => onClose(n.id)} variant="ghost" color="gray" size="1" aria-label="Close notification">
+                            <IconLoader name="x" size={14} />
+                        </Button>
+                    </Flex>
+                </Card>
             ))}
         </div>
     );
@@ -50,43 +50,16 @@ interface ConfirmationProps {
 }
 
 export const ConfirmationDialog: React.FC<ConfirmationProps> = ({ isOpen, title, message, onConfirm, onCancel, lang }) => {
-    if (!isOpen) return null;
-
     return (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in" onMouseDown={onCancel}>
-            <div
-                className="bg-white dark:bg-stone-800 rounded-2xl shadow-2xl p-6 w-96 transform scale-100 animate-in zoom-in-95 border border-stone-200 dark:border-stone-700"
-                onMouseDown={e => e.stopPropagation()}
-                role="dialog"
-                aria-modal="true"
-            >
-                <div className="flex items-start gap-4">
-                    <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full text-red-600 dark:text-red-400 shrink-0">
-                        {/* We can use the 'info' icon for generic queries, or specific alert icon. Let's use info or maybe add alert icon? We have 'info'. */}
-                        <IconLoader name="info" size={24} />
-                    </div>
-                    <div>
-                        <h3 className="text-lg font-bold text-stone-800 dark:text-stone-100 mb-2 leading-none mt-1">{title}</h3>
-                        <p className="text-stone-600 dark:text-stone-400 text-sm">{message}</p>
-                    </div>
-                </div>
-
-                <div className="flex justify-end gap-3 mt-8">
-                    <button
-                        onClick={onCancel}
-                        className="px-4 py-2 rounded-lg text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700 font-medium transition-colors text-sm"
-                    >
-                        {lang === 'zh' ? '取消' : 'Cancel'}
-                    </button>
-                    <button
-                        onClick={onConfirm}
-                        autoFocus
-                        className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 font-medium shadow-lg shadow-red-500/30 transition-all hover:scale-105 text-sm"
-                    >
-                        {lang === 'zh' ? '确认' : 'Confirm'}
-                    </button>
-                </div>
-            </div>
-        </div>
+        <AlertDialogShell
+            open={isOpen}
+            onOpenChange={(open) => { if (!open) onCancel(); }}
+            title={title}
+            description={message}
+            cancelLabel={lang === 'zh' ? '取消' : 'Cancel'}
+            confirmLabel={lang === 'zh' ? '确认' : 'Confirm'}
+            destructive
+            onConfirm={onConfirm}
+        />
     );
 };

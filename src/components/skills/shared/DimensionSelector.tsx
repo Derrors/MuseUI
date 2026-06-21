@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { OptionCard } from './OptionCard';
+import { Card, Text } from '../../ui';
 
 interface Option {
   id: string;
@@ -29,9 +30,9 @@ export const DimensionSelector: React.FC<Props> = ({
 
   return (
     <div className="space-y-2">
-      <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide">
+      <Text as="label" size="1" weight="bold" color="gray">
         {lang === 'zh' ? label_zh : label}
-      </label>
+      </Text>
       <div className={`grid gap-1.5 ${columns === 3 ? 'grid-cols-1 sm:grid-cols-3' : columns === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
         {options.map(opt => (
           <div
@@ -53,9 +54,9 @@ export const DimensionSelector: React.FC<Props> = ({
         ))}
       </div>
       {showDetailOnHover && hoveredOption?.promptModifier && (
-        <div className="text-[10px] text-stone-400 dark:text-stone-500 bg-stone-50 dark:bg-stone-800/50 p-2 rounded border border-stone-100 dark:border-stone-700 leading-relaxed">
+        <Card className="text-[10px] leading-relaxed text-[var(--gray-10)]">
           {hoveredOption.promptModifier.substring(0, 200)}...
-        </div>
+        </Card>
       )}
     </div>
   );

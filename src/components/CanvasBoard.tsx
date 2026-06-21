@@ -4,6 +4,7 @@ import { I18N } from '../constants';
 import DesignSpecRenderer from './DesignSpecRenderer';
 import IconLoader from './IconLoader';
 import DevRequestMonitor from './DevRequestMonitor';
+import { Button, ContextMenuShell, DialogShell, Flex, IconButton, Text } from './ui';
 
 interface Props {
     artboards: Artboard[];
@@ -56,7 +57,6 @@ const CanvasBoard: React.FC<Props> = ({
     const lastTouchDistance = useRef<number | null>(null);
     const syncTimeoutRef = useRef<ReturnType<typeof setTimeout>>(0 as any);
     const [guides, setGuides] = useState<{ type: 'v' | 'h'; pos: number }[]>([]);
-    const [contextMenu, setContextMenu] = useState<{ x: number, y: number, artboardId: string } | null>(null);
 
     const [editingLabel, setEditingLabel] = useState<{ id: string, text: string } | null>(null);
 
@@ -133,7 +133,6 @@ const CanvasBoard: React.FC<Props> = ({
                 applyTransformToDOM(newPos, nextScale);
                 scheduleSyncToReact(newPos, nextScale);
             } else {
-                setContextMenu(null);
                 const prevPos = posRef.current;
                 const newPos = { x: prevPos.x - e.deltaX, y: prevPos.y - e.deltaY };
                 posRef.current = newPos;
@@ -154,7 +153,6 @@ const CanvasBoard: React.FC<Props> = ({
 
     const handleMouseDown = (e: React.MouseEvent, artboardId?: string) => {
         if (e.button !== 0 && e.button !== 1) return;
-        setContextMenu(null);
         if (artboardId) {
             e.stopPropagation();
             setMovingArtboard(artboardId);
@@ -257,9 +255,6 @@ const CanvasBoard: React.FC<Props> = ({
             transitionRemovedRef.current = false;
         }
     };
-    const handleContextMenu = (e: React.MouseEvent, artboardId: string) => { e.preventDefault(); e.stopPropagation(); setContextMenu({ x: e.clientX, y: e.clientY, artboardId }); };
-    const handleRegenerateClick = () => { if (contextMenu) { onRegenerateArtboard(contextMenu.artboardId); setContextMenu(null); } };
-
     const getTouchDistance = (touches: React.TouchList) => {
         if (touches.length < 2) return 0;
         const dx = touches[0].clientX - touches[1].clientX;
@@ -273,7 +268,6 @@ const CanvasBoard: React.FC<Props> = ({
     });
 
     const handleTouchStart = (e: React.TouchEvent) => {
-        setContextMenu(null);
         if (e.touches.length === 1) {
             const touch = e.touches[0];
             setIsPanning(true);
@@ -389,7 +383,6 @@ const CanvasBoard: React.FC<Props> = ({
         setPosition({ x: (cW - contentW * newScale) / 2 - minX * newScale + 100 * newScale, y: (cH - contentH * newScale) / 2 - minY * newScale + 100 * newScale });
     };
 
-    useEffect(() => { const closeMenu = () => setContextMenu(null); window.addEventListener('click', closeMenu); return () => window.removeEventListener('click', closeMenu); }, []);
     const handleSpecUpdate = (id: string, newDs: DesignSystem) => { if (onUpdateArtboard) { const target = artboards.find(a => a.id === id); if (target && target.image.details) { onUpdateArtboard(id, { image: { ...target.image, details: { ...target.image.details, designSystem: newDs } } }); } } };
 
     return (
@@ -408,7 +401,29 @@ const CanvasBoard: React.FC<Props> = ({
                         </div>
                     ))}
                     {artboards.map(board => (
-                        <div key={board.id} style={{ position: 'absolute', left: board.x, top: board.y, width: board.width, height: board.height, contain: 'layout style' }} className={`bg-white shadow-md dark:shadow-black/40 group hover:ring-2 ring-teal-500/50 ${movingArtboard === board.id ? 'ring-4 ring-teal-500 cursor-grabbing z-50' : 'cursor-grab'} rounded-lg ${board.isNew ? 'flash-new' : ''}`} onMouseDown={(e) => handleMouseDown(e, board.id)} onContextMenu={(e) => handleContextMenu(e, board.id)} onDoubleClick={(e) => handleDoubleClick(e, board.id)}>
+                        <ContextMenuShell
+                            key={board.id}
+                            items={[
+                                {
+                                    label: lang === 'zh' ? '重新生成' : 'Regenerate',
+                                    iconName: 'refresh',
+                                    onSelect: () => onRegenerateArtboard(board.id),
+                                },
+                                {
+                                    label: lang === 'zh' ? '版本历史' : 'Version History',
+                                    iconName: 'clipboard',
+                                    disabled: !board.history || board.history.length === 0,
+                                    onSelect: () => setHistoryModalOpen(board.id),
+                                },
+                                {
+                                    label: lang === 'zh' ? '从画布移除' : 'Remove from Canvas',
+                                    iconName: 'trash',
+                                    destructive: true,
+                                    onSelect: () => onDeleteArtboard(board.id),
+                                },
+                            ]}
+                        >
+                        <div style={{ position: 'absolute', left: board.x, top: board.y, width: board.width, height: board.height, contain: 'layout style' }} className={`bg-white shadow-md dark:shadow-black/40 group hover:ring-2 ring-[var(--accent-8)]/50 ${movingArtboard === board.id ? 'ring-4 ring-[var(--accent-8)] cursor-grabbing z-50' : 'cursor-grab'} rounded-lg ${board.isNew ? 'flash-new' : ''}`} onMouseDown={(e) => handleMouseDown(e, board.id)} onDoubleClick={(e) => handleDoubleClick(e, board.id)}>
 
                             {/* Floating Toolbar & Label */}
                             <div
@@ -576,26 +591,25 @@ const CanvasBoard: React.FC<Props> = ({
 
                             {regeneratingId === board.id && (<div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white backdrop-blur-sm z-50 rounded-lg"><div className="animate-spin rounded-full h-10 w-10 border-4 border-teal-500 border-t-transparent mb-3"></div><span className="text-xs font-bold animate-pulse">{lang === 'zh' ? '生成中...' : 'Generating...'}</span></div>)}
                         </div>
+                        </ContextMenuShell>
                     ))}
                     {guides.map((g, idx) => (<div key={idx} className="absolute bg-red-500 pointer-events-none z-[60]" style={{ left: g.type === 'v' ? g.pos : -10000, top: g.type === 'h' ? g.pos : -10000, width: g.type === 'v' ? 1 : '20000px', height: g.type === 'h' ? 1 : '20000px' }} />))}
                 </div>
             </div>
 
             {/* Controls */}
-            <div className="absolute left-3 right-3 bottom-3 md:left-auto md:right-6 md:bottom-6 flex items-center gap-2 overflow-x-auto bg-white dark:bg-stone-800 p-2 rounded-lg shadow-lg border border-stone-200 dark:border-stone-700">
-                <button onClick={() => setScale(s => Math.max(0.1, s - 0.1))} className="p-2 hover:bg-stone-100 dark:hover:bg-stone-700 rounded text-stone-600 dark:text-stone-300">-</button>
-                <span className="text-xs font-mono w-10 text-center text-stone-600 dark:text-stone-300">{Math.round(scale * 100)}%</span>
-                <button onClick={() => setScale(s => Math.min(5, s + 0.1))} className="p-2 hover:bg-stone-100 dark:hover:bg-stone-700 rounded text-stone-600 dark:text-stone-300">+</button>
-                <div className="w-px h-4 bg-stone-300 dark:bg-stone-600 mx-1"></div>
-                <button onClick={onAutoArrange} className="text-xs px-2 py-1 hover:bg-stone-100 dark:hover:bg-stone-700 rounded text-stone-600 dark:text-stone-300 flex items-center gap-1"><IconLoader name="tidy" size={14} /> {lang === 'zh' ? '整理' : 'Tidy'}</button>
-                <button onClick={fitToScreen} className="text-xs px-2 py-1 hover:bg-stone-100 dark:hover:bg-stone-700 rounded text-stone-600 dark:text-stone-300">{t.fitToScreen}</button>
-                <button onClick={resetView} className="text-xs px-2 py-1 hover:bg-stone-100 dark:hover:bg-stone-700 rounded text-stone-600 dark:text-stone-300">{t.resetView}</button>
-            </div>
+            <Flex align="center" gap="2" className="absolute bottom-3 left-3 right-3 flex-wrap rounded-xl border border-[var(--gray-5)] bg-[var(--color-panel-solid)] p-2 shadow-xl md:bottom-6 md:left-auto md:right-6 md:flex-nowrap">
+                <IconButton iconName="zoom-out" label={lang === 'zh' ? '缩小' : 'Zoom out'} variant="soft" color="gray" onClick={() => setScale(s => Math.max(0.1, s - 0.1))} />
+                <Text size="2" weight="bold" className="w-12 text-center font-mono">{Math.round(scale * 100)}%</Text>
+                <IconButton iconName="zoom-in" label={lang === 'zh' ? '放大' : 'Zoom in'} variant="soft" color="gray" onClick={() => setScale(s => Math.min(5, s + 0.1))} />
+                <div className="mx-1 h-5 w-px bg-[var(--gray-5)]" />
+                <Button onClick={onAutoArrange} size="2" variant="soft" color="gray" iconName="tidy">{lang === 'zh' ? '整理' : 'Tidy'}</Button>
+                <Button onClick={fitToScreen} size="2" variant="soft" color="gray">{t.fitToScreen}</Button>
+                <Button onClick={resetView} size="2" variant="soft" color="gray">{t.resetView}</Button>
+            </Flex>
 
-            {contextMenu && (<div className="fixed bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded shadow-xl py-1 z-[100] w-48" style={{ left: contextMenu.x, top: contextMenu.y }}><button className="w-full text-left px-4 py-2 text-sm text-stone-700 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-700 flex items-center gap-2" onClick={handleRegenerateClick}><IconLoader name="refresh" size={14} /> {lang === 'zh' ? '重新生成' : 'Regenerate'}</button><button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-stone-100 dark:hover:bg-stone-700 flex items-center gap-2" onClick={() => { onDeleteArtboard(contextMenu.artboardId); setContextMenu(null); }}><IconLoader name="trash" size={14} /> {lang === 'zh' ? '从画布移除' : 'Remove from Canvas'}</button></div>)}
             {artboards.length === 0 && (<div className="absolute inset-0 flex items-center justify-center pointer-events-none"><div className="text-center text-stone-400 dark:text-stone-600"><div className="mb-4 flex justify-center"><IconLoader name="palette" size={64} /></div><h2 className="text-xl font-bold mb-2">{t.ready}</h2><p>{t.readyDesc}</p></div></div>)}
 
-            {/* History Modal Overlay */}
             {
                 historyModalOpen && (() => {
                     const board = artboards.find(b => b.id === historyModalOpen);
@@ -603,75 +617,56 @@ const CanvasBoard: React.FC<Props> = ({
                     const sortedHistory = [...board.history].reverse(); // Newest first
 
                     return (
-                        <div
-                            className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-8 animate-in fade-in duration-200"
-                            onMouseDown={() => setHistoryModalOpen(null)}
+                        <DialogShell
+                            open
+                            onOpenChange={(open) => { if (!open) setHistoryModalOpen(null); }}
+                            title={`${lang === 'zh' ? '版本历史' : 'Version History'} (${board.history.length})`}
+                            description={lang === 'zh' ? '选择一个历史版本恢复到画布。' : 'Select a previous version to restore it to the canvas.'}
+                            size="lg"
+                            footer={<Text size="1" color="gray">{lang === 'zh' ? '右键点击图片可快速删除' : 'Right-click an image to delete it quickly'}</Text>}
+                            closeLabel={lang === 'zh' ? '关闭历史版本' : 'Close version history'}
                         >
-                            <div
-                                className="bg-white dark:bg-stone-900 rounded-xl shadow-2xl max-w-4xl w-full max-h-[80vh] flex flex-col overflow-hidden border border-stone-200 dark:border-stone-800"
-                                onMouseDown={(e) => e.stopPropagation()}
-                            >
-                                <div className="flex items-center justify-between p-4 border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950">
-                                    <h3 className="font-bold text-lg text-stone-800 dark:text-stone-200">
-                                        {lang === 'zh' ? '版本历史' : 'Version History'}
-                                        <span className="ml-2 text-sm font-normal text-stone-500">({board.history.length})</span>
-                                    </h3>
-                                    <button onClick={() => setHistoryModalOpen(null)} className="p-1 hover:bg-stone-200 dark:hover:bg-stone-800 rounded-full text-stone-500">
-                                        <IconLoader name="x" size={20} />
-                                    </button>
-                                </div>
-
-                                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                        {sortedHistory.map(img => (
-                                            <div
-                                                key={img.id}
-                                                className={`relative group rounded-lg overflow-hidden border-2 transition-all ${board.image.id === img.id ? 'border-teal-500 ring-2 ring-teal-200 dark:ring-teal-900/30' : 'border-transparent hover:border-stone-300 dark:hover:border-stone-600'}`}
-                                                onContextMenu={(e) => {
-                                                    e.preventDefault();
-                                                    if (onDeleteHistoryItem) {
+                            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+                                {sortedHistory.map(img => (
+                                    <div
+                                        key={img.id}
+                                        className={`group relative overflow-hidden rounded-lg border-2 transition-all ${board.image.id === img.id ? 'border-[var(--accent-8)] ring-2 ring-[var(--accent-4)]' : 'border-transparent hover:border-[var(--gray-7)]'}`}
+                                        onContextMenu={(e) => {
+                                            e.preventDefault();
+                                            if (onDeleteHistoryItem) onDeleteHistoryItem(board.id, img.id);
+                                        }}
+                                    >
+                                        <button
+                                            className="relative block aspect-[3/4] w-full cursor-pointer bg-[var(--gray-3)]"
+                                            onClick={() => {
+                                                if (onUpdateArtboard) onUpdateArtboard(board.id, { image: img });
+                                            }}
+                                        >
+                                            <img src={img.url} className="h-full w-full object-cover" loading="lazy" />
+                                            {board.image.id === img.id && (
+                                                <div className="absolute left-2 top-2 rounded bg-[var(--accent-9)] px-2 py-0.5 text-[10px] font-bold text-white shadow">Current</div>
+                                            )}
+                                        </button>
+                                        <Flex align="center" justify="between" className="bg-[var(--gray-2)] p-2">
+                                            <Text size="1" color="gray" className="truncate">{new Date(img.timestamp).toLocaleTimeString()}</Text>
+                                            {onDeleteHistoryItem && (
+                                                <IconButton
+                                                    iconName="trash"
+                                                    label={lang === 'zh' ? '删除此版本' : 'Delete version'}
+                                                    size="1"
+                                                    variant="ghost"
+                                                    color="red"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
                                                         onDeleteHistoryItem(board.id, img.id);
-                                                    }
-                                                }}
-                                            >
-                                                <div
-                                                    className="aspect-[3/4] bg-stone-100 dark:bg-stone-800 cursor-pointer relative"
-                                                    onClick={() => {
-                                                        if (onUpdateArtboard) onUpdateArtboard(board.id, { image: img });
                                                     }}
-                                                >
-                                                    <img src={img.url} className="w-full h-full object-cover" loading="lazy" />
-                                                    {board.image.id === img.id && (
-                                                        <div className="absolute top-2 left-2 bg-teal-500 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow">Current</div>
-                                                    )}
-                                                </div>
-
-                                                {/* Info Footer */}
-                                                <div className="p-2 bg-stone-50 dark:bg-stone-900/80 text-[10px] text-stone-500 flex justify-between items-center">
-                                                    <span className="truncate max-w-[80px]">{new Date(img.timestamp).toLocaleTimeString()}</span>
-                                                    {onDeleteHistoryItem && (
-                                                        <button
-                                                            className="p-1 hover:bg-red-100 dark:hover:bg-red-900/40 text-stone-400 hover:text-red-500 rounded"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                onDeleteHistoryItem(board.id, img.id);
-                                                            }}
-                                                            title={lang === 'zh' ? '删除此版本' : 'Delete Version'}
-                                                        >
-                                                            <IconLoader name="trash" size={12} />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="p-3 bg-stone-50 dark:bg-stone-950 border-t border-stone-200 dark:border-stone-800 text-xs text-stone-400 flex justify-center">
-                                    {lang === 'zh' ? '右键点击图片可快速删除' : 'Right-click image to delete'}
-                                </div>
+                                                />
+                                            )}
+                                        </Flex>
                             </div>
-                        </div>
+                                ))}
+                            </div>
+                        </DialogShell>
                     );
                 })()
             }

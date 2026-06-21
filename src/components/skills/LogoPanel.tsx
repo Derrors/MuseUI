@@ -1,6 +1,7 @@
 import React from 'react';
 import { LogoConfig, LangType } from '../../types';
 import DesignMdSelector, { SelectorOption } from '../DesignMdSelector';
+import { Text, TextFieldControl } from '../ui';
 
 interface Props {
   config: LogoConfig;
@@ -86,29 +87,21 @@ export const LogoPanel: React.FC<Props> = ({ config, onChange, lang }) => {
     <div className="space-y-4">
       {/* Brand Name */}
       <div>
-        <label className="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1.5">
-          {isZh ? '品牌名称' : 'Brand Name'}
-        </label>
-        <input
-          type="text"
+        <TextFieldControl
+          label={isZh ? '品牌名称' : 'Brand Name'}
           value={config.brandName}
-          onChange={(e) => update({ brandName: e.target.value })}
+          onValueChange={(value) => update({ brandName: value })}
           placeholder={isZh ? '输入品牌名称...' : 'Enter brand name...'}
-          className="w-full px-3 py-2 text-sm rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
         />
       </div>
 
       {/* Slogan */}
       <div>
-        <label className="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1.5">
-          {isZh ? '标语（可选）' : 'Slogan (optional)'}
-        </label>
-        <input
-          type="text"
+        <TextFieldControl
+          label={isZh ? '标语（可选）' : 'Slogan (optional)'}
           value={config.slogan}
-          onChange={(e) => update({ slogan: e.target.value })}
+          onValueChange={(value) => update({ slogan: value })}
           placeholder={isZh ? '输入品牌标语...' : 'Enter brand slogan...'}
-          className="w-full px-3 py-2 text-sm rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
         />
       </div>
 
@@ -169,9 +162,9 @@ export const LogoPanel: React.FC<Props> = ({ config, onChange, lang }) => {
 
       {/* Size */}
       <div>
-        <label className="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1.5">
+        <Text as="label" size="1" weight="bold" color="gray">
           {isZh ? '尺寸' : 'Size'}
-        </label>
+        </Text>
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
           {LOGO_SIZES.map((s) => (
             <button
@@ -179,8 +172,8 @@ export const LogoPanel: React.FC<Props> = ({ config, onChange, lang }) => {
               onClick={() => update({ size: s.id as any })}
               className={`min-h-10 px-2 py-1.5 text-xs rounded-lg border transition-colors ${
                 config.size === s.id
-                  ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400'
-                  : 'border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:border-stone-300 dark:hover:border-stone-600'
+                  ? 'border-[var(--accent-8)] bg-[var(--accent-3)] text-[var(--accent-11)]'
+                  : 'border-[var(--gray-5)] text-[var(--gray-11)] hover:border-[var(--gray-8)]'
               }`}
             >
               {s.label}

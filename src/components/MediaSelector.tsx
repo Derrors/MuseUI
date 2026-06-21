@@ -2,6 +2,7 @@
 import React from 'react';
 import { MEDIA_ASPECT_RATIOS, MEDIA_RESOLUTIONS, MEDIA_TYPES } from '../constants';
 import { LangType, MediaAspectRatio, MediaResolutionPreset, MediaType } from '../types';
+import { Card, SelectField, SwitchField, Text, TextFieldControl } from './ui';
 
 interface Props {
   aspectRatio: MediaAspectRatio;
@@ -27,9 +28,9 @@ const MediaSelector: React.FC<Props> = ({
     <div className="space-y-5">
       {/* Aspect Ratio */}
       <div>
-        <label className="block text-sm font-medium text-stone-600 dark:text-stone-400 mb-2">
+        <Text as="label" size="2" weight="medium" color="gray">
           {isZh ? '画面比例' : 'Aspect Ratio'}
-        </label>
+        </Text>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
           {MEDIA_ASPECT_RATIOS.map(r => (
             <button
@@ -37,8 +38,8 @@ const MediaSelector: React.FC<Props> = ({
               onClick={() => onAspectRatioChange(r.id)}
               className={`min-h-14 flex flex-col items-center justify-center p-2 rounded-lg border transition-all ${
                 aspectRatio === r.id
-                  ? 'bg-teal-50 dark:bg-teal-500/10 border-teal-500 text-teal-600 dark:text-teal-300'
-                  : 'bg-white dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-stone-500 dark:text-stone-400 hover:border-stone-400 dark:hover:border-stone-600'
+                  ? 'bg-[var(--accent-3)] border-[var(--accent-8)] text-[var(--accent-11)]'
+                  : 'bg-[var(--color-panel-solid)] border-[var(--gray-5)] text-[var(--gray-11)] hover:border-[var(--gray-8)]'
               }`}
             >
               <RatioIcon ratio={r.id} active={aspectRatio === r.id} />
@@ -50,74 +51,53 @@ const MediaSelector: React.FC<Props> = ({
 
       {/* Resolution */}
       <div>
-        <label className="block text-sm font-medium text-stone-600 dark:text-stone-400 mb-2">
-          {isZh ? '分辨率' : 'Resolution'}
-        </label>
-        <select
+        <SelectField
+          label={isZh ? '分辨率' : 'Resolution'}
           value={resolution.id}
-          onChange={(e) => {
-            const res = filteredResolutions.find(r => r.id === e.target.value);
+          onValueChange={(value) => {
+            const res = filteredResolutions.find(r => r.id === value);
             if (res) onResolutionChange(res);
           }}
           disabled={customSize.active}
-          className="w-full bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 text-stone-900 dark:text-stone-200 text-sm rounded-lg focus:ring-teal-500 focus:border-teal-500 block p-2.5 disabled:opacity-50"
-        >
-          {filteredResolutions.map(r => (
-            <option key={r.id} value={r.id}>
-              {isZh ? r.name_zh : r.name} ({r.width}x{r.height})
-            </option>
-          ))}
-        </select>
+          options={filteredResolutions.map(r => ({
+            value: r.id,
+            label: `${isZh ? r.name_zh : r.name} (${r.width}x${r.height})`,
+          }))}
+        />
       </div>
 
       {/* Custom Size */}
-      <div className="p-3 bg-stone-50 dark:bg-stone-800/50 rounded-lg border border-stone-200 dark:border-stone-700">
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-stone-700 dark:text-stone-300">
-            {isZh ? '自定义尺寸' : 'Custom Size'}
-          </label>
-          <div className="relative inline-block w-10 mr-2 align-middle select-none">
-            <input
-              type="checkbox"
-              id="media-custom-toggle"
-              checked={customSize.active}
-              onChange={(e) => onCustomSizeChange({ ...customSize, active: e.target.checked })}
-              className="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer checked:right-0 right-5 border-stone-300 dark:border-stone-600"
-              style={{ right: customSize.active ? '0' : '50%' }}
-            />
-            <label
-              htmlFor="media-custom-toggle"
-              className={`toggle-label block overflow-hidden h-5 rounded-full cursor-pointer ${customSize.active ? 'bg-teal-600' : 'bg-stone-300 dark:bg-stone-600'}`}
-            />
-          </div>
-        </div>
+      <Card>
+        <SwitchField
+          label={isZh ? '自定义尺寸' : 'Custom Size'}
+          checked={customSize.active}
+          onCheckedChange={(checked) => onCustomSizeChange({ ...customSize, active: checked })}
+        />
         {customSize.active && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-stone-500 mb-1">{isZh ? '宽' : 'W'} (px)</label>
-              <input type="number" value={customSize.width}
-                onChange={(e) => onCustomSizeChange({ ...customSize, width: Number(e.target.value) })}
-                className="w-full bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 text-stone-900 dark:text-stone-200 text-sm rounded px-2 py-1 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-stone-500 mb-1">{isZh ? '高' : 'H'} (px)</label>
-              <input type="number" value={customSize.height}
-                onChange={(e) => onCustomSizeChange({ ...customSize, height: Number(e.target.value) })}
-                className="w-full bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 text-stone-900 dark:text-stone-200 text-sm rounded px-2 py-1 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
-              />
-            </div>
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <TextFieldControl
+              label={`${isZh ? '宽' : 'W'} (px)`}
+              type="number"
+              value={customSize.width}
+              onValueChange={(value) => onCustomSizeChange({ ...customSize, width: Number(value) })}
+            />
+            <TextFieldControl
+              label={`${isZh ? '高' : 'H'} (px)`}
+              type="number"
+              value={customSize.height}
+              onValueChange={(value) => onCustomSizeChange({ ...customSize, height: Number(value) })}
+            />
           </div>
         )}
-      </div>
+      </Card>
 
       <div className="h-px bg-stone-100 dark:bg-stone-800" />
 
       {/* Media Type */}
       <div>
-        <label className="block text-sm font-medium text-stone-600 dark:text-stone-400 mb-2">
+        <Text as="label" size="2" weight="medium" color="gray">
           {isZh ? '内容类型' : 'Content Type'}
-        </label>
+        </Text>
         <div className="grid grid-cols-2 gap-1.5">
           {MEDIA_TYPES.map(t => (
             <button
@@ -125,8 +105,8 @@ const MediaSelector: React.FC<Props> = ({
               onClick={() => onMediaTypeChange(t.id)}
               className={`px-3 py-2 rounded-lg border text-xs font-medium transition-all text-left ${
                 mediaType === t.id
-                  ? 'bg-teal-50 dark:bg-teal-500/10 border-teal-500 text-teal-600 dark:text-teal-300'
-                  : 'bg-white dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:border-stone-400 dark:hover:border-stone-600'
+                  ? 'bg-[var(--accent-3)] border-[var(--accent-8)] text-[var(--accent-11)]'
+                  : 'bg-[var(--color-panel-solid)] border-[var(--gray-5)] text-[var(--gray-11)] hover:border-[var(--gray-8)]'
               }`}
             >
               {isZh ? t.name_zh : t.name}
@@ -149,7 +129,7 @@ const RatioIcon: React.FC<{ ratio: MediaAspectRatio; active: boolean }> = ({ rat
     '3:2': [16, 11],
   };
   const [w, h] = dims[ratio];
-  const color = active ? 'stroke-teal-500' : 'stroke-current';
+  const color = active ? 'stroke-[var(--accent-10)]' : 'stroke-current';
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className={color}>
       <rect

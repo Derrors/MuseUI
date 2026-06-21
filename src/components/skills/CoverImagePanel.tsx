@@ -1,6 +1,7 @@
 import React from 'react';
 import { CoverImageConfig, LangType } from '../../types';
 import DesignMdSelector, { SelectorOption } from '../DesignMdSelector';
+import { Text, TextFieldControl } from '../ui';
 
 interface Props {
   config: CoverImageConfig;
@@ -122,23 +123,19 @@ export const CoverImagePanel: React.FC<Props> = ({ config, onChange, lang }) => 
 
       {(config.text === 'title-only' || config.text === 'title-subtitle' || config.text === 'text-rich') && (
         <div className="space-y-2">
-          <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide">
+          <Text as="label" size="1" weight="bold" color="gray">
             {lang === 'zh' ? '标题' : 'Title'}
-          </label>
-          <input
-            type="text"
+          </Text>
+          <TextFieldControl
             value={config.title}
-            onChange={(e) => update({ title: e.target.value })}
+            onValueChange={(value) => update({ title: value })}
             placeholder={lang === 'zh' ? '输入封面标题...' : 'Enter cover title...'}
-            className="w-full px-3 py-2 text-xs border border-stone-200 dark:border-stone-700 rounded-lg bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
           />
           {config.text === 'title-subtitle' && (
-            <input
-              type="text"
+            <TextFieldControl
               value={config.subtitle}
-              onChange={(e) => update({ subtitle: e.target.value })}
+              onValueChange={(value) => update({ subtitle: value })}
               placeholder={lang === 'zh' ? '副标题...' : 'Subtitle...'}
-              className="w-full px-3 py-2 text-xs border border-stone-200 dark:border-stone-700 rounded-lg bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
             />
           )}
         </div>

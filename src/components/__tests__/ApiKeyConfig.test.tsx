@@ -1,6 +1,14 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import ApiKeyConfig from '../ApiKeyConfig';
+import { ThemeProvider } from '../ui';
+
+const renderWithTheme = (ui: ReactElement) => render(
+  <ThemeProvider appearance="light">
+    {ui}
+  </ThemeProvider>,
+);
 
 describe('ApiKeyConfig', () => {
   beforeEach(() => {
@@ -8,7 +16,7 @@ describe('ApiKeyConfig', () => {
   });
 
   it('shows image edits endpoint preview and save status changes', async () => {
-    render(<ApiKeyConfig lang="zh" />);
+    renderWithTheme(<ApiKeyConfig lang="zh" />);
 
     await waitFor(() => {
       expect(screen.getAllByText((_, element) => (
@@ -24,6 +32,8 @@ describe('ApiKeyConfig', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '保存' }));
 
-    expect(screen.getByText('已保存')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('已保存到浏览器本地')).toBeInTheDocument();
+    });
   });
 });

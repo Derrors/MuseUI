@@ -36,7 +36,7 @@ const isChatCompletionsEndpoint = (baseUrl: string): boolean => {
 
 export const shouldFallbackToChatImageAPI = (error: unknown): boolean => {
     const message = error instanceof Error ? error.message : String(error);
-    return /messages is required|chat.?completions|unsupported.*images|images.*unsupported|no available compatible accounts|no compatible accounts|compatible accounts/i.test(message);
+    return /messages is required|chat.?completions|unsupported.*images|images.*unsupported|unsupported.*edits|edits.*unsupported|image.?edits|OpenAI image edit error (404|405|501)|no available compatible accounts|no compatible accounts|compatible accounts/i.test(message);
 };
 
 export async function callOpenAITextAPI(api: APIConfig, opts: TextAPIOptions): Promise<string> {
@@ -122,6 +122,28 @@ interface ImageAPIOptions {
     images?: { colorImageBase64?: string; styleImageBase64?: string; layoutImageBase64?: string | null; editImageBase64?: string; maskImageBase64?: string; contentImageBase64s?: string[] };
 }
 
+type ImageInputKind = 'edit' | 'color' | 'style' | 'layout' | 'content' | 'mask';
+
+const collectImageInputs = (images?: ImageAPIOptions['images'], includeMask = false): { kind: ImageInputKind; value: string }[] => {
+    if (!images) return [];
+    const inputs: { kind: ImageInputKind; value: string }[] = [];
+    const push = (kind: ImageInputKind, value?: string | null) => {
+        if (value) inputs.push({ kind, value });
+    };
+
+    push('edit', images.editImageBase64);
+    push('color', images.colorImageBase64);
+    push('style', images.styleImageBase64);
+    push('layout', images.layoutImageBase64 || undefined);
+    images.contentImageBase64s?.forEach(value => push('content', value));
+    if (includeMask) push('mask', images.maskImageBase64);
+    return inputs;
+};
+
+const hasEditableImageInputs = (images?: ImageAPIOptions['images']): boolean => (
+    collectImageInputs(images).length > 0
+);
+
 const aspectToSize = (aspect?: string): string => {
     switch (aspect) {
         case '16:9': return '1792x1024';
@@ -133,14 +155,35 @@ const aspectToSize = (aspect?: string): string => {
     }
 };
 
-const blobToDataUrl = (blob: Blob): Promise<string> => {
-    const reader = new FileReader();
-    return new Promise((resolve, reject) => {
+const dataUrlToBlob = (dataUrl: string): Blob => {
+    const match = dataUrl.match(/^data:([^;]+);base64,(.*)$/);
+    if (!match) {
+        const bytes = Uint8Array.from(atob(dataUrl), char => char.charCodeAt(0));
+        return new Blob([bytes], { type: 'image/png' });
+    }
+
+    const [, mimeType, base64Data] = match;
+    const bytes = Uint8Array.from(atob(base64Data), char => char.charCodeAt(0));
+    return new Blob([bytes], { type: mimeType || 'image/png' });
+};
+
+const imageSourceToBlob = async (source: string): Promise<Blob> => {
+    if (source.startsWith('http://') || source.startsWith('https://')) {
+        const res = await fetch(buildRequestUrl(source));
+        if (!res.ok) throw new Error(`Failed to fetch image input: ${res.status}`);
+        return res.blob();
+    }
+    return dataUrlToBlob(source);
+};
+
+const blobToDataUrl = (blob: Blob): Promise<string> => (
+    new Promise((resolve, reject) => {
+        const reader = new FileReader();
         reader.onload = () => resolve(reader.result as string);
         reader.onerror = reject;
         reader.readAsDataURL(blob);
-    });
-};
+    })
+);
 
 const fetchImageAsDataUrl = async (imageUrl: string): Promise<string> => {
     const imgRes = await fetch(buildRequestUrl(imageUrl));
@@ -163,25 +206,6 @@ const readOpenAIImageResponse = async (res: Response, errorPrefix: string): Prom
     return fetchImageAsDataUrl(imageUrl);
 };
 
-const dataUrlToBlob = async (input: string): Promise<Blob> => {
-    if (input.startsWith('http://') || input.startsWith('https://')) {
-        const res = await fetch(buildRequestUrl(input));
-        if (!res.ok) throw new Error(`Failed to fetch edit image: ${res.status}`);
-        return res.blob();
-    }
-
-    const match = input.match(/^data:([^;]+);base64,(.*)$/);
-    if (!match) {
-        throw new Error('Image edit input must be a data URL or remote URL');
-    }
-
-    const mimeType = match[1] || 'image/png';
-    const binary = atob(match[2]);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return new Blob([bytes], { type: mimeType });
-};
-
 export async function callOpenAIImageAPI(api: APIConfig, opts: ImageAPIOptions): Promise<string> {
     const res = await fetch(buildOpenAICompatibleRequestUrl(api.baseUrl, 'images/generations'), {
         method: 'POST',
@@ -202,8 +226,10 @@ export async function callOpenAIImageAPI(api: APIConfig, opts: ImageAPIOptions):
 }
 
 export async function callOpenAIImageEditAPI(api: APIConfig, opts: ImageAPIOptions): Promise<string> {
-    const editImage = opts.images?.editImageBase64;
-    if (!editImage) throw new Error('No edit image provided');
+    const imageInputs = collectImageInputs(opts.images);
+    if (imageInputs.length === 0) {
+        return callOpenAIImageAPI(api, opts);
+    }
 
     const form = new FormData();
     form.append('model', api.imageModel || DEFAULT_IMAGE_MODEL);
@@ -211,10 +237,15 @@ export async function callOpenAIImageEditAPI(api: APIConfig, opts: ImageAPIOptio
     form.append('size', aspectToSize(opts.aspectRatio));
     form.append('n', '1');
     form.append('output_format', 'png');
-    form.append('image', await dataUrlToBlob(editImage), 'reference.png');
+
+    for (const [index, input] of imageInputs.entries()) {
+        const blob = await imageSourceToBlob(input.value);
+        form.append('image', blob, `${input.kind}-${index + 1}.png`);
+    }
 
     if (opts.images?.maskImageBase64) {
-        form.append('mask', await dataUrlToBlob(opts.images.maskImageBase64), 'mask.png');
+        const maskBlob = await imageSourceToBlob(opts.images.maskImageBase64);
+        form.append('mask', maskBlob, 'mask.png');
     }
 
     const res = await fetch(buildOpenAICompatibleRequestUrl(api.baseUrl, 'images/edits'), {
@@ -230,19 +261,16 @@ export async function callOpenAIImageEditAPI(api: APIConfig, opts: ImageAPIOptio
 
 // OpenAI-compatible chat-based image generation (some proxies only support chat.completions for images)
 export async function callOpenAIChatImageAPI(api: APIConfig, opts: ImageAPIOptions): Promise<string> {
-    const imageUrls = [
-        opts.images?.editImageBase64,
-        opts.images?.styleImageBase64,
-        opts.images?.layoutImageBase64 || undefined,
-        opts.images?.colorImageBase64,
-        ...(opts.images?.contentImageBase64s || []),
-    ].filter(Boolean) as string[];
-    const messages: any[] = imageUrls.length > 0
+    const promptImages = collectImageInputs(opts.images);
+    const messages: any[] = promptImages.length > 0
         ? [{
             role: 'user',
             content: [
                 { type: 'text', text: opts.prompt },
-                ...imageUrls.map(url => ({ type: 'image_url', image_url: { url } })),
+                ...promptImages.map(input => ({
+                    type: 'image_url',
+                    image_url: { url: input.value },
+                })),
             ],
         }]
         : [{ role: 'user', content: opts.prompt }];
@@ -270,7 +298,7 @@ export async function callOpenAIChatImageAPI(api: APIConfig, opts: ImageAPIOptio
 
     // Try markdown image link: ![alt](url)
     const markdownMatch = content.match(/!\[.*?\]\((https?:\/\/[^)]+)\)/);
-            if (markdownMatch) {
+    if (markdownMatch) {
         const imageUrl = markdownMatch[1];
         return fetchImageAsDataUrl(imageUrl);
     }
@@ -312,7 +340,7 @@ export async function callImageAPI(opts: ImageAPIOptions): Promise<{ url: string
                 url = await callOpenAIChatImageAPI(api, opts);
             } else {
                 try {
-                    url = opts.images?.editImageBase64
+                    url = hasEditableImageInputs(opts.images)
                         ? await callOpenAIImageEditAPI(api, opts)
                         : await callOpenAIImageAPI(api, opts);
                 } catch (e: any) {

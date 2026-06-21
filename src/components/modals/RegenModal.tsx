@@ -2,6 +2,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { I18N } from '../../constants';
 import { LangType } from '../../types';
+import { Button, Card, DialogShell, Flex, TabsShell, Text, TextAreaField } from '../ui';
 
 interface Props {
   isOpen: boolean;
@@ -31,14 +32,23 @@ const RegenModal: React.FC<Props> = ({
   // Canvas logic
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
+
+  const syncCanvasSize = () => {
+      if (!containerRef.current || !canvasRef.current) return;
+      const canvas = canvasRef.current;
+      canvas.width = containerRef.current.clientWidth;
+      canvas.height = containerRef.current.clientHeight;
+  };
   
   // Reset drawing when opening
   useEffect(() => {
       if (isOpen && canvasRef.current && containerRef.current) {
+          syncCanvasSize();
+          const ctx = canvasRef.current.getContext('2d');
           const canvas = canvasRef.current;
-          const ctx = canvas.getContext('2d');
           if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
           setHasDrawn(false);
       }
@@ -46,16 +56,10 @@ const RegenModal: React.FC<Props> = ({
 
   // Adjust canvas size to image
   useEffect(() => {
-      if (targetImage && containerRef.current && canvasRef.current) {
-          const img = new Image();
-          img.src = targetImage;
-          img.onload = () => {
-              const canvas = canvasRef.current!;
-              // Match render size
-              canvas.width = containerRef.current!.clientWidth;
-              canvas.height = containerRef.current!.clientHeight;
-          };
-      }
+      if (!isOpen) return;
+      syncCanvasSize();
+      window.addEventListener('resize', syncCanvasSize);
+      return () => window.removeEventListener('resize', syncCanvasSize);
   }, [targetImage, isOpen]);
 
   const getCoordinates = (e: React.MouseEvent | React.TouchEvent) => {
@@ -117,44 +121,88 @@ const RegenModal: React.FC<Props> = ({
       }
   };
 
+  const createEditMask = () => {
+      const sourceCanvas = canvasRef.current;
+      const image = imageRef.current;
+      if (!sourceCanvas || !image || !image.naturalWidth || !image.naturalHeight) {
+          return sourceCanvas?.toDataURL('image/png') || null;
+      }
+
+      const output = document.createElement('canvas');
+      output.width = image.naturalWidth;
+      output.height = image.naturalHeight;
+      const ctx = output.getContext('2d');
+      if (!ctx) return sourceCanvas.toDataURL('image/png');
+
+      const canvasW = sourceCanvas.width;
+      const canvasH = sourceCanvas.height;
+      if (!canvasW || !canvasH) return sourceCanvas.toDataURL('image/png');
+
+      const imageRatio = image.naturalWidth / image.naturalHeight;
+      const canvasRatio = canvasW / canvasH;
+      const renderW = canvasRatio > imageRatio ? canvasH * imageRatio : canvasW;
+      const renderH = canvasRatio > imageRatio ? canvasH : canvasW / imageRatio;
+      const offsetX = (canvasW - renderW) / 2;
+      const offsetY = (canvasH - renderH) / 2;
+
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, output.width, output.height);
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.drawImage(sourceCanvas, offsetX, offsetY, renderW, renderH, 0, 0, output.width, output.height);
+      return output.toDataURL('image/png');
+  };
+
   const handleConfirm = () => {
       let mask = null;
-      if (hasDrawn && canvasRef.current) {
-          mask = canvasRef.current.toDataURL('image/png');
+      if (hasDrawn) {
+          mask = createEditMask();
       }
       onConfirm(mask);
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-0 sm:p-4">
-        <div className="bg-white dark:bg-stone-900 rounded-none sm:rounded-xl p-4 sm:p-6 max-w-4xl w-full h-[100dvh] sm:h-auto flex flex-col md:flex-row gap-4 sm:gap-6 max-h-[100dvh] sm:max-h-[90vh] overflow-y-auto md:overflow-hidden animate-in zoom-in-95">
-            
+    <DialogShell
+        open={isOpen}
+        onOpenChange={(open) => { if (!open) onClose(); }}
+        title={lang === 'zh' ? '重新生成 / 微调' : 'Regenerate / Refine'}
+        description={lang === 'zh' ? '圈选区域、补充参考图或布局后重新生成画板。' : 'Mask an area, add references or layout guidance, then regenerate this artboard.'}
+        size="lg"
+        closeLabel={lang === 'zh' ? '关闭重生成' : 'Close regenerate dialog'}
+        footer={(
+            <>
+                <Button onClick={onClose} variant="soft" color="gray">{t.cancel}</Button>
+                <Button onClick={handleConfirm} color="ruby" iconName="magic-wand">{lang === 'zh' ? '确认生成' : 'Generate'}</Button>
+            </>
+        )}
+    >
+        <div className="grid min-h-[calc(100dvh-190px)] gap-4 md:grid-cols-[minmax(0,1fr)_320px] md:min-h-[560px]">
             {/* Left Column: Image & Masking */}
-            <div className="flex-1 flex flex-col min-h-[42vh] md:min-h-0 bg-stone-100 dark:bg-stone-950 rounded-lg p-4 border border-stone-200 dark:border-stone-800">
-                <div className="flex justify-between items-center mb-2">
-                    <h4 className="text-xs font-bold text-stone-500 uppercase tracking-widest">
+            <Card className="flex min-h-[42vh] flex-col bg-[var(--gray-2)] p-4 md:min-h-0">
+                <Flex align="center" justify="between" gap="3" mb="2">
+                    <Text size="1" weight="bold" color="gray">
                         {lang === 'zh' ? '圈选重绘区域 (可选)' : 'Circle area to regenerate (Optional)'}
-                    </h4>
+                    </Text>
                     {hasDrawn && (
-                        <button onClick={clearCanvas} className="text-xs text-red-500 hover:underline">
+                        <Button onClick={clearCanvas} size="1" variant="ghost" color="red">
                             {lang === 'zh' ? '清除笔迹' : 'Clear Mask'}
-                        </button>
+                        </Button>
                     )}
-                </div>
+                </Flex>
                 
                 <div 
                     ref={containerRef}
-                    className="flex-1 relative overflow-hidden rounded border border-stone-300 dark:border-stone-700 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] cursor-crosshair touch-none"
+                    className="relative flex-1 cursor-crosshair touch-none overflow-hidden rounded-lg border border-[var(--gray-6)] bg-[var(--gray-3)]"
                 >
                     {targetImage ? (
                         <img 
+                            ref={imageRef}
                             src={targetImage} 
+                            alt=""
                             className="w-full h-full object-contain pointer-events-none select-none absolute inset-0" 
+                            onLoad={syncCanvasSize}
                         />
                     ) : (
-                        <div className="w-full h-full flex items-center justify-center text-stone-400">
+                        <div className="flex h-full w-full items-center justify-center text-[var(--gray-9)]">
                             No Image
                         </div>
                     )}
@@ -170,50 +218,40 @@ const RegenModal: React.FC<Props> = ({
                         onTouchEnd={stopDrawing}
                     />
                 </div>
-            </div>
+            </Card>
 
             {/* Right Column: Controls */}
-            <div className="w-full md:w-80 flex flex-col gap-4 overflow-y-visible md:overflow-y-auto md:pr-1">
-                <h3 className="font-bold text-lg text-stone-800 dark:text-white">{lang === 'zh' ? '重新生成 / 微调' : 'Regenerate / Refine'}</h3>
-                
+            <div className="flex min-h-0 w-full flex-col gap-4 overflow-y-visible md:overflow-y-auto md:pr-1">
                 {/* Mode Select */}
-                <div className="flex bg-stone-100 dark:bg-stone-800 p-1 rounded-lg shrink-0">
-                    <button 
-                        onClick={() => setMode('refine')}
-                        className={`flex-1 py-1.5 text-xs font-bold rounded ${mode === 'refine' ? 'bg-white dark:bg-stone-700 shadow text-teal-600' : 'text-stone-500'}`}
-                    >
-                        {lang === 'zh' ? '微调 (Refine)' : 'Refine'}
-                    </button>
-                    <button 
-                        onClick={() => setMode('new')}
-                        className={`flex-1 py-1.5 text-xs font-bold rounded ${mode === 'new' ? 'bg-white dark:bg-stone-700 shadow text-teal-600' : 'text-stone-500'}`}
-                    >
-                        {lang === 'zh' ? '重绘 (New)' : 'Redraw'}
-                    </button>
-                </div>
+                <TabsShell
+                    value={mode}
+                    onValueChange={(value) => setMode(value as 'refine' | 'new')}
+                    items={[
+                        { value: 'refine', label: lang === 'zh' ? '微调' : 'Refine' },
+                        { value: 'new', label: lang === 'zh' ? '重绘' : 'Redraw' },
+                    ]}
+                />
 
                 <div className="flex-1 flex flex-col min-h-0 gap-4">
-                    <div>
-                        <label className="block text-xs font-bold text-stone-500 mb-1">{lang === 'zh' ? '修改提示词' : 'Refinement Prompt'}</label>
-                        <textarea 
-                            value={prompt}
-                            onChange={(e) => setPrompt(e.target.value)}
-                            className="w-full h-32 text-sm p-2 border border-stone-300 dark:border-stone-700 rounded bg-stone-50 dark:bg-stone-800 text-stone-800 dark:text-stone-200 resize-none focus:ring-2 focus:ring-teal-500 outline-none"
-                            placeholder={hasDrawn 
+                    <TextAreaField
+                        label={lang === 'zh' ? '修改提示词' : 'Refinement Prompt'}
+                        value={prompt}
+                        onValueChange={setPrompt}
+                        rows={6}
+                        placeholder={hasDrawn
                                 ? (lang === 'zh' ? '描述红圈区域需要改成什么...' : 'Describe what to change in the circled area...')
                                 : (lang === 'zh' ? '例如: 将按钮改成红色...' : 'e.g. Change button color to red...')
-                            }
-                        />
-                    </div>
+                        }
+                    />
                     
                     <div className="grid grid-cols-2 gap-2">
                         <div>
-                            <label className="block text-[10px] font-bold text-stone-500 mb-1">{lang === 'zh' ? '参考图' : 'Ref Img'}</label>
-                            <div className="relative border border-dashed border-stone-300 dark:border-stone-700 rounded-lg h-16 flex items-center justify-center bg-stone-50 dark:bg-stone-900 overflow-hidden group hover:border-teal-500">
+                            <Text as="label" size="1" weight="bold" color="gray">{lang === 'zh' ? '参考图' : 'Ref Img'}</Text>
+                            <div className="group relative mt-1 flex h-20 items-center justify-center overflow-hidden rounded-lg border border-dashed border-[var(--gray-7)] bg-[var(--gray-2)] hover:border-[var(--accent-7)]">
                                 {referenceImage ? (
                                     <>
-                                        <img src={referenceImage} className="w-full h-full object-cover opacity-50" />
-                                        <button onClick={onRemoveReference} className="absolute inset-0 flex items-center justify-center text-xs font-bold text-red-500 bg-white/80 opacity-0 group-hover:opacity-100">
+                                        <img src={referenceImage} alt="" className="w-full h-full object-cover opacity-60" />
+                                        <button onClick={onRemoveReference} className="absolute inset-0 flex items-center justify-center bg-[var(--color-panel-solid)]/85 text-xs font-bold text-[var(--red-10)] opacity-0 transition-opacity group-hover:opacity-100">
                                             ×
                                         </button>
                                     </>
@@ -226,11 +264,11 @@ const RegenModal: React.FC<Props> = ({
                             </div>
                         </div>
                         <div>
-                            <label className="block text-[10px] font-bold text-stone-500 mb-1">{lang === 'zh' ? '布局' : 'Layout'}</label>
-                            <div className="relative border border-dashed border-stone-300 dark:border-stone-700 rounded-lg h-16 flex items-center justify-center bg-stone-50 dark:bg-stone-900 overflow-hidden group hover:border-teal-500">
+                            <Text as="label" size="1" weight="bold" color="gray">{lang === 'zh' ? '布局' : 'Layout'}</Text>
+                            <div className="group relative mt-1 flex h-20 items-center justify-center overflow-hidden rounded-lg border border-dashed border-[var(--gray-7)] bg-[var(--gray-2)] hover:border-[var(--accent-7)]">
                                 {layoutImage ? (
                                     <>
-                                        <img src={layoutImage} className="w-full h-full object-contain p-1" />
+                                        <img src={layoutImage} alt="" className="w-full h-full object-contain p-1" />
                                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2">
                                             <button onClick={onOpenBuilder} className="text-white text-[10px] hover:underline">Edit</button>
                                             <button onClick={onRemoveLayout} className="text-red-400 text-[10px] hover:underline">✕</button>
@@ -245,18 +283,9 @@ const RegenModal: React.FC<Props> = ({
                         </div>
                     </div>
                 </div>
-
-                <div className="flex justify-end gap-3 pt-4 border-t border-stone-200 dark:border-stone-800 mt-auto">
-                    <button onClick={onClose} className="px-4 py-2 text-sm text-stone-500 hover:text-stone-700 dark:hover:text-stone-300">
-                        {t.cancel}
-                    </button>
-                    <button onClick={handleConfirm} className="px-6 py-2 bg-teal-600 text-white rounded text-sm font-bold hover:bg-teal-500 shadow-lg shadow-teal-500/20">
-                        {lang === 'zh' ? '确认生成' : 'Generate'}
-                    </button>
-                </div>
             </div>
         </div>
-    </div>
+    </DialogShell>
   );
 };
 

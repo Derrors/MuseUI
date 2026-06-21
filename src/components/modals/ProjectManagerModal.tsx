@@ -3,6 +3,7 @@ import { I18N } from '../../constants';
 import { LangType, Project } from '../../types';
 import IconLoader from '../IconLoader';
 import html2canvas from 'html2canvas';
+import { Badge, Button, Card, DialogShell, IconButton, TextFieldControl } from '../ui';
 
 interface Props {
     isOpen: boolean;
@@ -81,24 +82,19 @@ const ProjectManagerModal: React.FC<Props> = ({
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4">
-            <div className="bg-white dark:bg-stone-800 rounded-none sm:rounded-xl shadow-2xl w-full sm:w-[600px] max-h-[100dvh] sm:max-h-[85vh] flex flex-col overflow-hidden">
-                {/* Header */}
-                <div className="p-4 border-b border-stone-200 dark:border-stone-700 flex justify-between items-center bg-stone-50 dark:bg-stone-900/50">
-                    <h2 className="font-bold text-lg text-stone-800 dark:text-stone-100 flex items-center gap-2">
-                        <IconLoader name="layout" />
-                        {lang === 'zh' ? '项目管理' : 'Project Manager'}
-                    </h2>
-                    <button onClick={onClose} className="text-stone-400 hover:text-stone-600 dark:hover:text-stone-200">
-                        <IconLoader name="x" size={20} />
-                    </button>
-                </div>
-
+        <DialogShell
+            open={isOpen}
+            onOpenChange={(open) => { if (!open) onClose(); }}
+            title={lang === 'zh' ? '项目管理' : 'Project Manager'}
+            description={lang === 'zh' ? '保存当前画布、创建空白项目或切换历史项目。' : 'Save the current canvas, create a blank project, or switch saved projects.'}
+            size="md"
+            closeLabel={lang === 'zh' ? '关闭项目管理' : 'Close project manager'}
+        >
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-stone-100 dark:bg-stone-900/20">
+                <div className="custom-scrollbar">
 
                     {/* New Project Input Section */}
-                    <div className="bg-white dark:bg-stone-800 p-4 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700 mb-6">
+                    <Card className="mb-6">
                         <h3 className="text-xs font-bold text-stone-500 uppercase mb-3 flex items-center gap-2">
                             <IconLoader name="plus" size={12} />
                             {lang === 'zh' ? '新建项目' : 'Create New Project'}
@@ -114,31 +110,31 @@ const ProjectManagerModal: React.FC<Props> = ({
                                 )}
                             </div>
                             <div className="flex-1 flex flex-col justify-center gap-2">
-                                <input
-                                    type="text"
-                                    className="w-full text-sm px-3 py-2 rounded-lg border border-stone-300 dark:border-stone-600 bg-stone-50 dark:bg-stone-900 focus:ring-2 ring-teal-500"
+                                <TextFieldControl
                                     placeholder={lang === 'zh' ? '输入新项目名称...' : 'Enter new project name...'}
                                     value={newProjectName}
-                                    onChange={e => setNewProjectName(e.target.value)}
+                                    onValueChange={setNewProjectName}
                                 />
                             </div>
-                            <button
+                            <Button
                                 onClick={handleSaveNew}
                                 disabled={!newProjectName.trim()}
-                                className="min-h-11 px-4 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-bold text-sm shadow-lg shadow-teal-500/30 disabled:opacity-50 disabled:shadow-none transition-all flex items-center justify-center gap-2"
+                                color="ruby"
+                                iconName="save"
                             >
-                                <IconLoader name="save" size={16} />
                                 {lang === 'zh' ? '保存' : 'Save'}
-                            </button>
+                            </Button>
                         </div>
-                        <button
+                        <Button
                             onClick={() => { onCreateBlankProject(); onClose(); }}
-                            className="mt-3 w-full py-2 text-sm rounded-lg border-2 border-dashed border-stone-300 dark:border-stone-600 text-stone-500 dark:text-stone-400 hover:border-teal-400 hover:text-teal-500 dark:hover:border-teal-500 dark:hover:text-teal-400 transition-colors flex items-center justify-center gap-2"
+                            className="mt-3 w-full"
+                            variant="soft"
+                            color="gray"
+                            iconName="plus"
                         >
-                            <IconLoader name="plus" size={16} />
                             {lang === 'zh' ? '新建空白项目' : 'New Blank Project'}
-                        </button>
-                    </div>
+                        </Button>
+                    </Card>
 
                     <h3 className="text-xs font-bold text-stone-500 uppercase mb-3 ml-1">{lang === 'zh' ? '已保存项目' : 'Saved Projects'}</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -157,9 +153,9 @@ const ProjectManagerModal: React.FC<Props> = ({
                                         }`}
                                 >
                                     {isCurrent && (
-                                        <div className="absolute top-2 left-2 z-10 bg-teal-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg">
+                                        <Badge color="ruby" className="absolute top-2 left-2 z-10 shadow-lg">
                                             {lang === 'zh' ? '当前' : 'Current'}
-                                        </div>
+                                        </Badge>
                                     )}
 
                                     {/* Thumbnail */}
@@ -193,15 +189,15 @@ const ProjectManagerModal: React.FC<Props> = ({
                                                 </button>
                                             )}
                                             {isCurrent && (
-                                                <button
+                                                <IconButton
                                                     onClick={() => {
                                                         onUpdateProjectContent(project.id, thumbnail || undefined);
                                                     }}
-                                                    className="p-2 bg-teal-500 text-white rounded-full hover:bg-teal-600 transform hover:scale-110 transition-all shadow-lg"
-                                                    title={lang === 'zh' ? '更新内容与封面' : 'Update Content & Thumbnail'}
-                                                >
-                                                    <IconLoader name="refresh-cw" size={16} />
-                                                </button>
+                                                    iconName="refresh-cw"
+                                                    label={lang === 'zh' ? '更新内容与封面' : 'Update Content & Thumbnail'}
+                                                    color="ruby"
+                                                    variant="solid"
+                                                />
                                             )}
                                             <button
                                                 onClick={() => {
@@ -251,8 +247,7 @@ const ProjectManagerModal: React.FC<Props> = ({
                         })}
                     </div>
                 </div>
-            </div>
-        </div>
+        </DialogShell>
     );
 };
 
