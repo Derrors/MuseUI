@@ -36,7 +36,7 @@ const isChatCompletionsEndpoint = (baseUrl: string): boolean => {
 
 export const shouldFallbackToChatImageAPI = (error: unknown): boolean => {
     const message = error instanceof Error ? error.message : String(error);
-    return /messages is required|chat.?completions|unsupported.*images|images.*unsupported|no available compatible accounts|no compatible accounts|compatible accounts/i.test(message);
+    return /messages is required|chat.?completions|unsupported.*images|images.*unsupported|unsupported.*edits|edits.*unsupported|image.?edits|OpenAI image edit error (404|405|501)|no available compatible accounts|no compatible accounts|compatible accounts/i.test(message);
 };
 
 export async function callOpenAITextAPI(api: APIConfig, opts: TextAPIOptions): Promise<string> {
@@ -122,6 +122,28 @@ interface ImageAPIOptions {
     images?: { colorImageBase64?: string; styleImageBase64?: string; layoutImageBase64?: string | null; editImageBase64?: string; maskImageBase64?: string; contentImageBase64s?: string[] };
 }
 
+type ImageInputKind = 'edit' | 'color' | 'style' | 'layout' | 'content' | 'mask';
+
+const collectImageInputs = (images?: ImageAPIOptions['images'], includeMask = false): { kind: ImageInputKind; value: string }[] => {
+    if (!images) return [];
+    const inputs: { kind: ImageInputKind; value: string }[] = [];
+    const push = (kind: ImageInputKind, value?: string | null) => {
+        if (value) inputs.push({ kind, value });
+    };
+
+    push('edit', images.editImageBase64);
+    push('color', images.colorImageBase64);
+    push('style', images.styleImageBase64);
+    push('layout', images.layoutImageBase64 || undefined);
+    images.contentImageBase64s?.forEach(value => push('content', value));
+    if (includeMask) push('mask', images.maskImageBase64);
+    return inputs;
+};
+
+const hasEditableImageInputs = (images?: ImageAPIOptions['images']): boolean => (
+    collectImageInputs(images).length > 0
+);
+
 const aspectToSize = (aspect?: string): string => {
     switch (aspect) {
         case '16:9': return '1792x1024';
@@ -131,6 +153,48 @@ const aspectToSize = (aspect?: string): string => {
         case '1:1': return '1024x1024';
         default: return '1024x1024';
     }
+};
+
+const dataUrlToBlob = (dataUrl: string): Blob => {
+    const match = dataUrl.match(/^data:([^;]+);base64,(.*)$/);
+    if (!match) {
+        const bytes = Uint8Array.from(atob(dataUrl), char => char.charCodeAt(0));
+        return new Blob([bytes], { type: 'image/png' });
+    }
+
+    const [, mimeType, base64Data] = match;
+    const bytes = Uint8Array.from(atob(base64Data), char => char.charCodeAt(0));
+    return new Blob([bytes], { type: mimeType || 'image/png' });
+};
+
+const imageSourceToBlob = async (source: string): Promise<Blob> => {
+    if (source.startsWith('http://') || source.startsWith('https://')) {
+        const res = await fetch(buildRequestUrl(source));
+        if (!res.ok) throw new Error(`Failed to fetch image input: ${res.status}`);
+        return res.blob();
+    }
+    return dataUrlToBlob(source);
+};
+
+const blobToDataUrl = (blob: Blob): Promise<string> => (
+    new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    })
+);
+
+const readImageResponse = async (data: any): Promise<string> => {
+    const b64Json = data.data?.[0]?.b64_json;
+    if (b64Json) return `data:image/png;base64,${b64Json}`;
+
+    const imageUrl = data.data?.[0]?.url;
+    if (!imageUrl) throw new Error('No image URL returned from OpenAI');
+
+    const imgRes = await fetch(buildRequestUrl(imageUrl));
+    if (!imgRes.ok) throw new Error(`Failed to fetch generated image: ${imgRes.status}`);
+    return blobToDataUrl(await imgRes.blob());
 };
 
 export async function callOpenAIImageAPI(api: APIConfig, opts: ImageAPIOptions): Promise<string> {
@@ -155,28 +219,63 @@ export async function callOpenAIImageAPI(api: APIConfig, opts: ImageAPIOptions):
     }
 
     const data = await res.json();
-    const b64Json = data.data?.[0]?.b64_json;
-    if (b64Json) return `data:image/png;base64,${b64Json}`;
+    return readImageResponse(data);
+}
 
-    const imageUrl = data.data?.[0]?.url;
-    if (!imageUrl) throw new Error('No image URL returned from OpenAI');
+export async function callOpenAIImageEditAPI(api: APIConfig, opts: ImageAPIOptions): Promise<string> {
+    const imageInputs = collectImageInputs(opts.images);
+    if (imageInputs.length === 0) {
+        return callOpenAIImageAPI(api, opts);
+    }
 
-    // Fetch the image and convert to base64
-    const imgRes = await fetch(buildRequestUrl(imageUrl));
-    if (!imgRes.ok) throw new Error(`Failed to fetch generated image: ${imgRes.status}`);
-    const blob = await imgRes.blob();
-    const reader = new FileReader();
-    const base64: string = await new Promise((resolve, reject) => {
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
+    const form = new FormData();
+    form.append('model', api.imageModel || DEFAULT_IMAGE_MODEL);
+    form.append('prompt', opts.prompt);
+    form.append('size', aspectToSize(opts.aspectRatio));
+    form.append('n', '1');
+
+    for (const [index, input] of imageInputs.entries()) {
+        const blob = await imageSourceToBlob(input.value);
+        form.append('image', blob, `${input.kind}-${index + 1}.png`);
+    }
+
+    if (opts.images?.maskImageBase64) {
+        const maskBlob = await imageSourceToBlob(opts.images.maskImageBase64);
+        form.append('mask', maskBlob, 'mask.png');
+    }
+
+    const res = await fetch(buildOpenAICompatibleRequestUrl(api.baseUrl, 'images/edits'), {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${api.apiKey}`,
+        },
+        body: form,
     });
-    return base64;
+
+    if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`OpenAI image edit error ${res.status}: ${err}`);
+    }
+
+    const data = await res.json();
+    return readImageResponse(data);
 }
 
 // OpenAI-compatible chat-based image generation (some proxies only support chat.completions for images)
 export async function callOpenAIChatImageAPI(api: APIConfig, opts: ImageAPIOptions): Promise<string> {
-    const messages: any[] = [{ role: 'user', content: opts.prompt }];
+    const promptImages = collectImageInputs(opts.images);
+    const messages: any[] = promptImages.length > 0
+        ? [{
+            role: 'user',
+            content: [
+                { type: 'text', text: opts.prompt },
+                ...promptImages.map(input => ({
+                    type: 'image_url',
+                    image_url: { url: input.value },
+                })),
+            ],
+        }]
+        : [{ role: 'user', content: opts.prompt }];
 
     const res = await fetch(buildOpenAICompatibleRequestUrl(api.baseUrl, 'chat/completions'), {
         method: 'POST',
@@ -261,7 +360,9 @@ export async function callImageAPI(opts: ImageAPIOptions): Promise<{ url: string
                 url = await callOpenAIChatImageAPI(api, opts);
             } else {
                 try {
-                    url = await callOpenAIImageAPI(api, opts);
+                    url = hasEditableImageInputs(opts.images)
+                        ? await callOpenAIImageEditAPI(api, opts)
+                        : await callOpenAIImageAPI(api, opts);
                 } catch (e: any) {
                     if (api.imageMode !== 'images' && shouldFallbackToChatImageAPI(e)) {
                         url = await callOpenAIChatImageAPI(api, opts);

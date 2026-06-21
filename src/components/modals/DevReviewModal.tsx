@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { GenerationConfig } from '../../types';
+import { Badge, Button, Card, DialogShell, Flex, Text } from '../ui';
 
 interface Props {
   reviewData: {
@@ -40,58 +41,71 @@ const DevReviewModal: React.FC<Props> = ({ reviewData, onClose }) => {
   const { apiRequestInfo } = reviewData;
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-0 sm:p-4">
-        <div className="bg-white dark:bg-stone-900 rounded-none sm:rounded-xl p-4 sm:p-6 max-w-3xl w-full h-[100dvh] sm:h-auto max-h-[100dvh] sm:max-h-[90vh] flex flex-col">
-            <h3 className="text-lg font-bold mb-4 text-stone-800 dark:text-white">
-                {reviewData.layoutAnalysis ? 'Layout Confirmation' : 'Review Generation Request'}
-            </h3>
-            <div className="space-y-4 flex-1 overflow-y-auto mb-4 custom-scrollbar p-1">
+    <DialogShell
+        open={!!reviewData}
+        onOpenChange={(open) => { if (!open) onClose(); }}
+        title={reviewData.layoutAnalysis ? 'Layout Confirmation' : 'Review Generation Request'}
+        description="Inspect the prompt, references and API target before running the request."
+        size="lg"
+        closeLabel="Close request review"
+        footer={(
+            <>
+                <Button onClick={onClose} variant="soft" color="gray">Cancel</Button>
+                <Button onClick={reviewData.pendingAction} color="ruby" iconName="magic-wand">
+                    {reviewData.layoutAnalysis ? 'Confirm & Generate' : 'Generate'}
+                </Button>
+            </>
+        )}
+    >
+            <div className="space-y-4">
                 {reviewData.layoutAnalysis && (
-                    <div className="bg-teal-50 dark:bg-teal-900/20 border-l-4 border-teal-500 p-4 rounded-r">
-                        <label className="text-xs font-bold text-teal-600 dark:text-teal-400 block mb-2 uppercase tracking-wide">
-                            AI Analyzed Layout Structure
-                        </label>
-                        <p className="text-sm text-stone-700 dark:text-stone-300 whitespace-pre-wrap font-mono text-xs leading-relaxed">
+                    <Card>
+                        <Flex align="center" gap="2" mb="2">
+                            <Badge color="ruby" variant="soft">Layout</Badge>
+                            <Text size="1" weight="bold" color="gray">AI Analyzed Layout Structure</Text>
+                        </Flex>
+                        <p className="whitespace-pre-wrap font-mono text-xs leading-relaxed text-[var(--gray-11)]">
                             {reviewData.layoutAnalysis}
                         </p>
-                        <p className="text-[10px] text-stone-500 mt-2 italic">
+                        <Text as="p" size="1" color="gray" mt="2">
                             This description will be used to generate the UI instead of the raw wireframe image to avoid visual artifacts.
-                        </p>
-                    </div>
+                        </Text>
+                    </Card>
                 )}
 
                 {/* API Request Info */}
                 {apiRequestInfo && (
-                    <div className="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 p-4 rounded-r">
-                        <label className="text-xs font-bold text-amber-600 dark:text-amber-400 block mb-2 uppercase tracking-wide">
-                            API Request Preview
-                        </label>
+                    <Card>
+                        <Flex align="center" gap="2" mb="3">
+                            <Badge color="amber" variant="soft">API</Badge>
+                            <Text size="1" weight="bold" color="gray">API Request Preview</Text>
+                        </Flex>
                         <div className="space-y-2">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                                <div className="bg-white dark:bg-stone-800 p-2 rounded border border-amber-200 dark:border-amber-800">
+                                <div className="rounded border border-[var(--amber-5)] bg-[var(--color-panel-solid)] p-2">
                                     <span className="text-stone-500 dark:text-stone-400 block text-[10px] uppercase">Provider</span>
                                     <span className="font-mono text-stone-700 dark:text-stone-300">{apiRequestInfo.targetAPI.provider}</span>
                                 </div>
-                                <div className="bg-white dark:bg-stone-800 p-2 rounded border border-amber-200 dark:border-amber-800">
+                                <div className="rounded border border-[var(--amber-5)] bg-[var(--color-panel-solid)] p-2">
                                     <span className="text-stone-500 dark:text-stone-400 block text-[10px] uppercase">Model</span>
                                     <span className="font-mono text-stone-700 dark:text-stone-300">{apiRequestInfo.targetAPI.model}</span>
                                 </div>
-                                <div className="bg-white dark:bg-stone-800 p-2 rounded border border-amber-200 dark:border-amber-800 sm:col-span-2">
+                                <div className="rounded border border-[var(--amber-5)] bg-[var(--color-panel-solid)] p-2 sm:col-span-2">
                                     <span className="text-stone-500 dark:text-stone-400 block text-[10px] uppercase">Base URL</span>
                                     <span className="font-mono text-stone-700 dark:text-stone-300 text-[11px] break-all">{apiRequestInfo.targetAPI.baseUrl}</span>
                                 </div>
-                                <div className="bg-white dark:bg-stone-800 p-2 rounded border border-amber-200 dark:border-amber-800">
+                                <div className="rounded border border-[var(--amber-5)] bg-[var(--color-panel-solid)] p-2">
                                     <span className="text-stone-500 dark:text-stone-400 block text-[10px] uppercase">Aspect Ratio</span>
                                     <span className="font-mono text-stone-700 dark:text-stone-300">{apiRequestInfo.requestParams.aspectRatio}</span>
                                 </div>
                                 {apiRequestInfo.requestParams.preferredApiId && (
-                                    <div className="bg-white dark:bg-stone-800 p-2 rounded border border-amber-200 dark:border-amber-800">
+                                    <div className="rounded border border-[var(--amber-5)] bg-[var(--color-panel-solid)] p-2">
                                         <span className="text-stone-500 dark:text-stone-400 block text-[10px] uppercase">Preferred API ID</span>
                                         <span className="font-mono text-stone-700 dark:text-stone-300">{apiRequestInfo.requestParams.preferredApiId}</span>
                                     </div>
                                 )}
                             </div>
-                            <div className="bg-white dark:bg-stone-800 p-2 rounded border border-amber-200 dark:border-amber-800">
+                            <div className="rounded border border-[var(--amber-5)] bg-[var(--color-panel-solid)] p-2">
                                 <span className="text-stone-500 dark:text-stone-400 block text-[10px] uppercase mb-1">Images</span>
                                 <div className="flex flex-wrap gap-1">
                                     {apiRequestInfo.requestParams.images.hasColorImage && (
@@ -123,36 +137,28 @@ const DevReviewModal: React.FC<Props> = ({ reviewData, onClose }) => {
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </Card>
                 )}
 
                 <div>
-                    <label className="text-xs font-bold text-stone-500 block mb-1">Final Prompt Preview</label>
-                    <p className="text-sm text-stone-700 dark:text-stone-300 bg-stone-100 dark:bg-stone-800 p-2 rounded whitespace-pre-wrap font-mono text-xs max-h-40 overflow-y-auto">{reviewData.prompt}</p>
+                    <Text size="1" weight="bold" color="gray">Final Prompt Preview</Text>
+                    <Card className="mt-1">
+                        <p className="max-h-48 overflow-y-auto whitespace-pre-wrap font-mono text-xs text-[var(--gray-11)]">{reviewData.prompt}</p>
+                    </Card>
                 </div>
 
                 {reviewData.images.length > 0 && (
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         {reviewData.images.map((img, idx) => (
                             <div key={idx} className="text-center group relative">
-                                <img src={img.url} className="h-16 w-full object-contain mx-auto border rounded bg-stone-50 dark:bg-stone-800" />
+                                <img src={img.url} alt={img.label} className="h-16 w-full object-contain mx-auto border rounded bg-stone-50 dark:bg-stone-800" />
                                 <span className="text-[9px] text-stone-500 block mt-1 truncate px-1">{img.label}</span>
                             </div>
                         ))}
                     </div>
                 )}
             </div>
-            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 border-t border-stone-200 dark:border-stone-800">
-                <button onClick={onClose} className="min-h-11 px-4 py-2 text-stone-500 hover:text-stone-700 dark:hover:text-stone-300 text-sm">Cancel</button>
-                <button
-                    onClick={reviewData.pendingAction}
-                    className="min-h-11 px-6 py-2 bg-gradient-to-r from-teal-600 to-cyan-600 text-white rounded font-bold hover:from-teal-500 hover:to-cyan-500 shadow-lg text-sm"
-                >
-                    {reviewData.layoutAnalysis ? 'Confirm & Generate' : 'Generate'}
-                </button>
-            </div>
-        </div>
-    </div>
+    </DialogShell>
   );
 };
 

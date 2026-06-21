@@ -2,6 +2,7 @@
 import React from 'react';
 import { PLATFORMS, RESOLUTION_PRESETS, I18N } from '../constants';
 import { PlatformType, ResolutionPreset, LangType } from '../types';
+import { Card, SelectField, SwitchField, Text, TextFieldControl } from './ui';
 
 interface Props {
   selectedPlatform: PlatformType;
@@ -29,16 +30,16 @@ const PlatformSelector: React.FC<Props> = ({
   return (
     <div className="space-y-6">
       <div>
-        <label className="block text-sm font-medium text-stone-600 dark:text-stone-400 mb-2">{t.platform}</label>
+        <Text as="label" size="2" weight="medium" color="gray">{t.platform}</Text>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {PLATFORMS.map((p) => (
             <button
               key={p.id}
               onClick={() => onSelectPlatform(p.id)}
-              className={`min-h-16 flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${
+              className={`mt-2 min-h-16 flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${
                 selectedPlatform === p.id
-                  ? 'bg-teal-50 dark:bg-teal-500/10 border-teal-500 text-teal-600 dark:text-teal-200'
-                  : 'bg-white dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-stone-500 dark:text-stone-400 hover:border-stone-400 dark:hover:border-stone-600'
+                  ? 'bg-[var(--accent-3)] border-[var(--accent-8)] text-[var(--accent-11)]'
+                  : 'bg-[var(--color-panel-solid)] border-[var(--gray-5)] text-[var(--gray-11)] hover:border-[var(--gray-8)]'
               }`}
             >
               <svg 
@@ -57,67 +58,45 @@ const PlatformSelector: React.FC<Props> = ({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-stone-600 dark:text-stone-400 mb-2">{t.resolution}</label>
-        <select
+        <SelectField
+          label={t.resolution}
           value={selectedResolution.id}
-          onChange={(e) => {
-            const res = filteredResolutions.find(d => d.id === e.target.value);
+          onValueChange={(value) => {
+            const res = filteredResolutions.find(d => d.id === value);
             if (res) onSelectResolution(res);
           }}
           disabled={customSize.active}
-          className="w-full bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 text-stone-900 dark:text-stone-200 text-sm rounded-lg focus:ring-teal-500 focus:border-teal-500 block p-2.5 disabled:opacity-50 disabled:bg-stone-100 dark:disabled:bg-stone-900"
-        >
-          {filteredResolutions.map(d => (
-            <option key={d.id} value={d.id}>
-              {lang === 'zh' && d.name_zh ? d.name_zh : d.name} ({d.width}x{d.height})
-            </option>
-          ))}
-        </select>
+          options={filteredResolutions.map(d => ({
+            value: d.id,
+            label: `${lang === 'zh' && d.name_zh ? d.name_zh : d.name} (${d.width}x${d.height})`,
+          }))}
+        />
       </div>
 
-      <div className="p-4 bg-stone-50 dark:bg-stone-800/50 rounded-lg border border-stone-200 dark:border-stone-700">
-        <div className="flex items-center justify-between mb-3">
-          <label className="text-sm font-medium text-stone-700 dark:text-stone-300">{t.customRes}</label>
-          <div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-            <input 
-              type="checkbox" 
-              name="toggle" 
-              id="custom-size-toggle" 
-              checked={customSize.active}
-              onChange={(e) => onCustomSizeChange({ ...customSize, active: e.target.checked })}
-              className="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer checked:right-0 right-5 border-stone-300 dark:border-stone-600"
-              style={{ right: customSize.active ? '0' : '50%' }}
-            />
-            <label 
-              htmlFor="custom-size-toggle" 
-              className={`toggle-label block overflow-hidden h-5 rounded-full cursor-pointer ${customSize.active ? 'bg-teal-600' : 'bg-stone-300 dark:bg-stone-600'}`}
-            ></label>
-          </div>
-        </div>
+      <Card>
+        <SwitchField
+          label={t.customRes}
+          checked={customSize.active}
+          onCheckedChange={(checked) => onCustomSizeChange({ ...customSize, active: checked })}
+        />
         
         {customSize.active && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-stone-500 mb-1">{t.width} (px)</label>
-              <input
-                type="number"
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <TextFieldControl
+                label={`${t.width} (px)`}
                 value={customSize.width}
-                onChange={(e) => onCustomSizeChange({ ...customSize, width: Number(e.target.value) })}
-                className="w-full bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 text-stone-900 dark:text-stone-200 text-sm rounded px-2 py-1 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-stone-500 mb-1">{t.height} (px)</label>
-              <input
                 type="number"
-                value={customSize.height}
-                onChange={(e) => onCustomSizeChange({ ...customSize, height: Number(e.target.value) })}
-                className="w-full bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 text-stone-900 dark:text-stone-200 text-sm rounded px-2 py-1 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
+                onValueChange={(value) => onCustomSizeChange({ ...customSize, width: Number(value) })}
               />
-            </div>
+              <TextFieldControl
+                label={`${t.height} (px)`}
+                value={customSize.height}
+                type="number"
+                onValueChange={(value) => onCustomSizeChange({ ...customSize, height: Number(value) })}
+              />
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 };

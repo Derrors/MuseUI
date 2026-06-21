@@ -1,6 +1,7 @@
 import React from 'react';
 import { StickerDesignConfig, LangType } from '../../types';
 import DesignMdSelector, { SelectorOption } from '../DesignMdSelector';
+import { Text, TextFieldControl } from '../ui';
 
 interface Props {
   config: StickerDesignConfig;
@@ -76,29 +77,21 @@ export const StickerDesignPanel: React.FC<Props> = ({ config, onChange, lang }) 
     <div className="space-y-4">
       {/* Subject Name */}
       <div>
-        <label className="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1.5">
-          {isZh ? '主题名称' : 'Subject Name'}
-        </label>
-        <input
-          type="text"
+        <TextFieldControl
+          label={isZh ? '主题名称' : 'Subject Name'}
           value={config.subjectName}
-          onChange={(e) => update({ subjectName: e.target.value })}
+          onValueChange={(value) => update({ subjectName: value })}
           placeholder={isZh ? '输入贴纸主题...' : 'Enter sticker subject...'}
-          className="w-full px-3 py-2 text-sm rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
         />
       </div>
 
       {/* Expression / Mood */}
       <div>
-        <label className="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1.5">
-          {isZh ? '表情/情绪（可选）' : 'Expression / Mood (optional)'}
-        </label>
-        <input
-          type="text"
+        <TextFieldControl
+          label={isZh ? '表情/情绪（可选）' : 'Expression / Mood (optional)'}
           value={config.expression}
-          onChange={(e) => update({ expression: e.target.value })}
+          onValueChange={(value) => update({ expression: value })}
           placeholder={isZh ? '例如：开心、生气、惊讶...' : 'e.g., happy, angry, surprised...'}
-          className="w-full px-3 py-2 text-sm rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
         />
       </div>
 
@@ -159,9 +152,9 @@ export const StickerDesignPanel: React.FC<Props> = ({ config, onChange, lang }) 
 
       {/* Aspect Ratio */}
       <div>
-        <label className="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1.5">
+        <Text as="label" size="1" weight="bold" color="gray">
           {isZh ? '比例' : 'Aspect Ratio'}
-        </label>
+        </Text>
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
           {ASPECT_RATIOS.map((r) => (
             <button
@@ -169,8 +162,8 @@ export const StickerDesignPanel: React.FC<Props> = ({ config, onChange, lang }) 
               onClick={() => update({ aspect: r.id as any })}
               className={`min-h-10 px-2 py-1.5 text-xs rounded-lg border transition-colors ${
                 config.aspect === r.id
-                  ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400'
-                  : 'border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:border-stone-300 dark:hover:border-stone-600'
+                  ? 'border-[var(--accent-8)] bg-[var(--accent-3)] text-[var(--accent-11)]'
+                  : 'border-[var(--gray-5)] text-[var(--gray-11)] hover:border-[var(--gray-8)]'
               }`}
             >
               {r.label}

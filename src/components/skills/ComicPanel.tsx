@@ -1,6 +1,7 @@
 import React from 'react';
 import { ComicConfig, LangType } from '../../types';
 import DesignMdSelector, { SelectorOption } from '../DesignMdSelector';
+import { Text } from '../ui';
 
 interface Props {
   config: ComicConfig;
@@ -116,20 +117,20 @@ export const ComicPanel: React.FC<Props> = ({ config, onChange, lang }) => {
       />
 
       <div className="space-y-2">
-        <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide">
+        <Text as="label" size="1" weight="bold" color="gray">
           {lang === 'zh' ? '页数' : 'Page Count'}
-        </label>
+        </Text>
         <input
           type="range"
           min={3}
           max={20}
           value={config.pageCount}
           onChange={(e) => update({ pageCount: parseInt(e.target.value) })}
-          className="w-full accent-teal-500"
+          className="w-full accent-[var(--accent-9)]"
         />
         <div className="flex justify-between text-[10px] text-stone-400">
           <span>3</span>
-          <span className="font-bold text-teal-500">{config.pageCount}</span>
+          <span className="font-bold text-[var(--accent-11)]">{config.pageCount}</span>
           <span>20</span>
         </div>
       </div>

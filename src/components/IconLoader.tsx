@@ -13,6 +13,7 @@ interface Props {
     name: IconName;
     size?: number | string;
     className?: string;
+    style?: React.CSSProperties;
 }
 
 const ICONS: Record<IconName, React.ReactNode> = {
@@ -66,7 +67,7 @@ const ICONS: Record<IconName, React.ReactNode> = {
     ),
 };
 
-const IconLoader: React.FC<Props> = ({ name, size = 16, className = "" }) => {
+const IconLoader: React.FC<Props> = ({ name, size = 16, className = "", style }) => {
     return (
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -79,6 +80,7 @@ const IconLoader: React.FC<Props> = ({ name, size = 16, className = "" }) => {
             strokeLinecap="round"
             strokeLinejoin="round"
             className={`shrink-0 ${className}`}
+            style={style}
         >
             {ICONS[name] || <circle cx="12" cy="12" r="10" />}
         </svg>

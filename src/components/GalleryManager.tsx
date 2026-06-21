@@ -5,6 +5,7 @@ import { I18N } from '../constants';
 import DesignSpecRenderer from './DesignSpecRenderer';
 import JSZip from 'jszip';
 import { getHistoryPaginated, HistoryPaginatedResponse } from '../services/idbHistoryService';
+import { Badge, Button, Card, DialogShell, Flex, IconButton, SelectField, Text, TextFieldControl } from './ui';
 
 interface Props {
     history: GeneratedImage[];
@@ -339,60 +340,62 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-stone-100/95 dark:bg-stone-950/95 backdrop-blur-md flex flex-col animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-50 flex flex-col bg-[var(--gray-1)]/95 text-[var(--gray-12)] backdrop-blur-md animate-in fade-in duration-300">
 
             {/* Top Bar: Filters & Controls */}
-            <div className="px-3 py-3 sm:px-6 sm:py-4 flex flex-col lg:flex-row lg:flex-wrap lg:items-center justify-between gap-3 sm:gap-4 bg-white dark:bg-stone-950 border-b border-stone-200 dark:border-stone-800 shadow-sm">
+            <div className="flex flex-col gap-3 border-b border-[var(--gray-5)] bg-[var(--color-panel-solid)] px-3 py-3 shadow-sm sm:px-6 sm:py-4 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
                 <div className="flex w-full lg:w-auto flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
-                    <h2 className="text-xl font-bold text-stone-800 dark:text-white flex items-center gap-2">
-                        <span>🖼️</span> {t.gallery} <span className="text-sm font-normal text-stone-500">({filteredImages.length})</span>
-                    </h2>
-                    <div className="hidden lg:block h-6 w-px bg-stone-300 dark:bg-stone-700 mx-2"></div>
+                    <Flex align="center" gap="2">
+                        <Text size="5" weight="bold">{t.gallery}</Text>
+                        <Badge color="ruby" variant="soft">{filteredImages.length}</Badge>
+                    </Flex>
+                    <div className="hidden lg:block h-6 w-px bg-[var(--gray-5)] mx-2"></div>
 
                     {/* Filters */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex gap-2">
-                        <select
+                        <SelectField
                             value={filterPlatform}
-                            onChange={(e) => setFilterPlatform(e.target.value)}
-                            className="text-sm px-3 py-2 sm:py-1.5 bg-stone-50 dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded-lg focus:ring-teal-500 text-stone-700 dark:text-stone-300"
-                        >
-                            <option value="all">{t.platform}: {t.all}</option>
-                            {platforms.map(p => <option key={p} value={p}>{p}</option>)}
-                        </select>
-                        <select
+                            onValueChange={setFilterPlatform}
+                            options={[
+                                { value: 'all', label: `${t.platform}: ${t.all}` },
+                                ...platforms.map(p => ({ value: p as string, label: p as string })),
+                            ]}
+                        />
+                        <SelectField
                             value={filterProjectId}
-                            onChange={(e) => setFilterProjectId(e.target.value)}
-                            className="text-sm px-3 py-2 sm:py-1.5 bg-stone-50 dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded-lg focus:ring-teal-500 text-stone-700 dark:text-stone-300 lg:max-w-[150px]"
-                        >
-                            <option value="all">{lang === 'zh' ? '所有项目' : 'All Projects'}</option>
-                            <option value="unassigned">{lang === 'zh' ? '未分配' : 'Unassigned'}</option>
-                            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        </select>
-                        <select
+                            onValueChange={setFilterProjectId}
+                            options={[
+                                { value: 'all', label: lang === 'zh' ? '所有项目' : 'All Projects' },
+                                { value: 'unassigned', label: lang === 'zh' ? '未分配' : 'Unassigned' },
+                                ...projects.map(p => ({ value: p.id, label: p.name })),
+                            ]}
+                        />
+                        <SelectField
                             value={filterStyle}
-                            onChange={(e) => setFilterStyle(e.target.value)}
-                            className="text-sm px-3 py-2 sm:py-1.5 bg-stone-50 dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded-lg focus:ring-teal-500 text-stone-700 dark:text-stone-300"
-                        >
-                            <option value="all">{t.designStyle}: {t.all}</option>
-                            {styles.map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                        <input
-                            type="text"
+                            onValueChange={setFilterStyle}
+                            options={[
+                                { value: 'all', label: `${t.designStyle}: ${t.all}` },
+                                ...styles.map(s => ({ value: s as string, label: s as string })),
+                            ]}
+                        />
+                        <TextFieldControl
                             placeholder={t.searchPrompt}
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="text-sm px-3 py-2 sm:py-1.5 bg-stone-50 dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500 text-stone-700 dark:text-stone-300 w-full lg:w-48"
+                            onValueChange={setSearchTerm}
+                            className="w-full lg:w-48"
                         />
                     </div>
                 </div>
 
                 <div className="flex w-full lg:w-auto items-center justify-between lg:justify-end gap-3">
-                    <button
+                    <Button
                         onClick={() => fileInputRef.current?.click()}
-                        className="text-sm px-4 py-2 bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300 rounded-lg hover:bg-teal-200 dark:hover:bg-teal-900/50 transition-colors"
+                        variant="soft"
+                        color="ruby"
+                        iconName="upload"
                     >
                         {lang === 'zh' ? '导入图片' : 'Import'}
-                    </button>
+                    </Button>
                     <input
                         type="file"
                         ref={fileInputRef}
@@ -402,25 +405,24 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
                         onChange={handleImport}
                     />
 
-                    <button
+                    <Button
                         onClick={() => {
                             setIsSelectMode(!isSelectMode);
                             setSelectedIds([]);
                         }}
-                        className={`text-sm font-bold px-4 py-2 rounded-lg transition-colors ${isSelectMode ? 'bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400' : 'text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-900 hover:text-stone-800 dark:hover:text-stone-200'
-                            }`}
+                        variant={isSelectMode ? 'solid' : 'soft'}
+                        color={isSelectMode ? 'ruby' : 'gray'}
                     >
                         {isSelectMode ? t.cancel : t.selectMode}
-                    </button>
+                    </Button>
 
-                    <button
+                    <IconButton
                         onClick={onClose}
-                        className="bg-stone-200 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-600 dark:text-stone-300 rounded-full p-2"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+                        iconName="x"
+                        label={lang === 'zh' ? '关闭图库' : 'Close gallery'}
+                        variant="soft"
+                        color="gray"
+                    />
                 </div>
             </div>
 
@@ -556,10 +558,10 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
 
             {/* Bottom Action Bar (Select Mode) */}
             {isSelectMode && (
-                <div className="p-4 border-t border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-950 flex justify-center items-center gap-4 shadow-lg z-50 animate-in slide-in-from-bottom-10">
-                    <span className="text-sm font-bold text-stone-600 dark:text-stone-300 mr-2">
+                <div className="z-50 flex flex-col items-stretch gap-3 border-t border-[var(--gray-5)] bg-[var(--color-panel-solid)] p-4 shadow-lg animate-in slide-in-from-bottom-10 sm:flex-row sm:items-center sm:justify-center">
+                    <Text size="2" weight="bold" className="mr-2">
                         {selectedIds.length} {t.selected}
-                    </span>
+                    </Text>
 
                     {/* Stitch Controls */}
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-stone-100 dark:bg-stone-900 rounded-lg border border-stone-200 dark:border-stone-800">
@@ -582,63 +584,63 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
                                 title="Columns"
                             />
                         )}
-                        <button
+                        <Button
                             onClick={handleStitch}
                             disabled={selectedIds.length === 0 || isStitching}
-                            className="ml-2 text-xs font-bold text-teal-600 hover:text-teal-800 disabled:opacity-50 flex items-center gap-1"
+                            size="1"
+                            variant="soft"
+                            color="ruby"
+                            iconName={isStitching ? 'loader' : 'grid'}
+                            className={isStitching ? 'animate-pulse' : undefined}
                         >
-                            {isStitching ? <span className="animate-spin">⏳</span> : <span>🧩</span>}
                             {lang === 'zh' ? '拼图' : 'Stitch'}
-                        </button>
+                        </Button>
                     </div>
 
-                    <div className="w-px h-6 bg-stone-300 dark:bg-stone-700 mx-1"></div>
+                    <div className="hidden h-6 w-px bg-[var(--gray-5)] sm:block"></div>
 
-                    <button
+                    <Button
                         onClick={handleBatchAdd}
                         disabled={selectedIds.length === 0}
-                        className="px-4 py-2 text-sm font-bold text-teal-600 bg-teal-50 dark:bg-teal-900/20 rounded-lg hover:bg-teal-100 disabled:opacity-50 transition-colors"
+                        color="ruby"
+                        variant="soft"
+                        iconName="plus"
                     >
                         {lang === 'zh' ? '添加到画布' : 'Add to Canvas'}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         onClick={handleBatchDelete}
                         disabled={selectedIds.length === 0}
-                        className="px-4 py-2 text-sm font-bold text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 disabled:opacity-50 transition-colors"
+                        color="red"
+                        variant="soft"
+                        iconName="trash"
                     >
                         {t.deleteSelected}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         onClick={handleBatchDownload}
                         disabled={selectedIds.length === 0}
-                        className="px-4 py-2 text-sm font-bold text-white bg-stone-800 dark:bg-stone-700 rounded-lg hover:bg-stone-600 disabled:opacity-50 transition-colors"
+                        color="gray"
+                        iconName="download"
                     >
                         {t.downloadSelected}
-                    </button>
+                    </Button>
                 </div>
             )}
 
             {/* Lightbox / Zoom View */}
             {zoomedImage && (
-                <div
-                    className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center p-3 sm:p-8 animate-in fade-in duration-200"
-                    onClick={() => setZoomedImage(null)}
+                <DialogShell
+                    open={!!zoomedImage}
+                    onOpenChange={(open) => { if (!open) setZoomedImage(null); }}
+                    title={lang === 'zh' ? '设计详情' : 'Design Details'}
+                    description={zoomedImage.prompt}
+                    size="full"
+                    closeLabel={lang === 'zh' ? '关闭设计详情' : 'Close design details'}
                 >
-                    <button
-                        className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors"
-                        onClick={() => setZoomedImage(null)}
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-
-                    <div
-                        className="max-w-7xl max-h-full flex flex-col md:flex-row gap-4 sm:gap-8 bg-stone-900 rounded-xl sm:rounded-2xl overflow-hidden border border-stone-800 shadow-2xl"
-                        onClick={(e) => e.stopPropagation()}
-                    >
+                    <div className="flex max-h-[calc(100dvh-190px)] flex-col overflow-hidden rounded-xl border border-[var(--gray-5)] bg-[var(--gray-2)] md:flex-row">
                         {/* Image Area */}
-                        <div className="flex-1 bg-black flex items-center justify-center p-4 overflow-auto">
+                        <div className="flex flex-1 items-center justify-center overflow-auto bg-black p-4">
                             {zoomedImage.details?.designSystem ? (
                                 <div className="w-full h-full bg-white overflow-auto rounded shadow-lg">
                                     <DesignSpecRenderer designSystem={zoomedImage.details.designSystem} lang={lang} />
@@ -653,49 +655,44 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
                         </div>
 
                         {/* Sidebar Info */}
-                        <div className="w-full md:w-80 bg-stone-900 p-6 flex flex-col border-l border-stone-800">
-                            <h3 className="text-xl font-bold text-white mb-6 border-b border-stone-800 pb-4">
-                                {lang === 'zh' ? '设计详情' : 'Design Details'}
-                            </h3>
-
+                        <div className="flex w-full flex-col border-t border-[var(--gray-5)] bg-[var(--color-panel-solid)] p-6 md:w-80 md:border-l md:border-t-0">
                             <div className="space-y-4 text-sm flex-1 overflow-y-auto">
                                 <div>
-                                    <span className="block text-stone-500 text-xs uppercase mb-1">{lang === 'zh' ? '设备' : 'Device'}</span>
-                                    <span className="text-stone-300">{zoomedImage.details?.resolution}</span>
+                                    <Text as="span" size="1" color="gray">{lang === 'zh' ? '设备' : 'Device'}</Text>
+                                    <Text as="p" size="2">{zoomedImage.details?.resolution}</Text>
                                 </div>
                                 <div>
-                                    <span className="block text-stone-500 text-xs uppercase mb-1">{lang === 'zh' ? '风格' : 'Style'}</span>
-                                    <span className="text-stone-300">{getStyleName(zoomedImage.details?.style)}</span>
+                                    <Text as="span" size="1" color="gray">{lang === 'zh' ? '风格' : 'Style'}</Text>
+                                    <Text as="p" size="2">{getStyleName(zoomedImage.details?.style)}</Text>
                                 </div>
                                 <div>
-                                    <span className="block text-stone-500 text-xs uppercase mb-1">{lang === 'zh' ? '提示词' : 'Prompt'}</span>
-                                    <p className="text-stone-400 italic leading-relaxed text-xs">
+                                    <Text as="span" size="1" color="gray">{lang === 'zh' ? '提示词' : 'Prompt'}</Text>
+                                    <p className="text-xs italic leading-relaxed text-[var(--gray-11)]">
                                         {zoomedImage.prompt}
                                     </p>
                                 </div>
                             </div>
 
                             <div className="mt-6 flex flex-col gap-3">
-                                <button
+                                <Button
                                     onClick={() => {
                                         onAddBatch([zoomedImage]);
                                         setZoomedImage(null);
                                         onClose();
                                     }}
-                                    className="w-full py-3 rounded-lg font-bold bg-white text-black hover:bg-stone-200 transition-colors"
+                                    color="ruby"
+                                    iconName="plus"
                                 >
                                     {lang === 'zh' ? '还原到画布' : 'Restore to Canvas'}
-                                </button>
+                                </Button>
 
                                 {/* Only show image download if not a code spec */}
                                 {!zoomedImage.details?.designSystem && (
-                                    <a
-                                        href={zoomedImage.url}
-                                        download={`muse-ui-${zoomedImage.id}.png`}
-                                        className="w-full py-3 rounded-lg font-bold border border-stone-700 text-stone-300 hover:bg-stone-800 text-center transition-colors"
-                                    >
-                                        {t.download}
-                                    </a>
+                                    <Button asChild color="gray" variant="soft" iconName="download">
+                                        <a href={zoomedImage.url} download={`muse-ui-${zoomedImage.id}.png`}>
+                                            {t.download}
+                                        </a>
+                                    </Button>
                                 )}
                             </div>
                         </div>
@@ -718,7 +715,7 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
                             {lang === 'zh' ? '已加载全部内容' : 'All content loaded'}
                         </div>
                     )}
-                </div>
+                </DialogShell>
             )}
         </div>
     );
