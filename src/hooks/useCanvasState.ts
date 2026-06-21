@@ -63,14 +63,16 @@ export const useCanvasState = (
 
 
     // Actions
-    const handleSaveToHistory = async (img: GeneratedImage) => {
+    const handleSaveToHistory = async (img: GeneratedImage): Promise<GeneratedImage> => {
         try {
-            await saveImageToHistory(img);
+            const saved = await saveImageToHistory(img);
             const updated = await getHistory();
             setHistory(updated);
+            return saved;
         } catch (e) {
             console.error("DB Save Failed", e);
             setHistory(prev => [img, ...prev]);
+            return img;
         }
     };
 
@@ -141,15 +143,15 @@ export const useCanvasState = (
                     batchId: 'upload'
                 }
             };
-            await handleSaveToHistory(newImage);
+            const savedImage = await handleSaveToHistory(newImage);
 
             setArtboards(prev => [...prev, {
-                id: newImage.id,
+                id: savedImage.id,
                 x, y,
                 width: dims.width,
                 height: dims.height,
-                image: newImage,
-                history: [newImage],
+                image: savedImage,
+                history: [savedImage],
                 label: file.name
             }]);
         } catch (e) {

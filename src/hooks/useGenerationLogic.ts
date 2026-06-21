@@ -7,6 +7,7 @@ import { createGenerationConfig, getEffectiveResolution } from '../domain/genera
 import { buildDevReviewData } from '../domain/generation/devReview';
 import { createGeneratedImage } from '../domain/generation/images';
 import { loadSkillPrompting, resolveSkillResolution } from '../domain/generation/skillPrompting';
+import { completeGenerationTask, createGenerationTask, failGenerationTask } from '../services/generationTaskService';
 import {
     createStickerMetadata,
     getStickerBackgroundStrategy,
@@ -14,7 +15,7 @@ import {
     repairStickerTransparency,
 } from '../domain/stickers';
 import type { GenerationCanvasState, GenerationConfigState, GenerationReviewData, RegenState } from '../domain/generation/types';
-import type { StickerDesignConfig } from '../types';
+import type { GenerationTask, StickerDesignConfig } from '../types';
 
 export const useGenerationLogic = (
     lang: LangType,
@@ -44,6 +45,50 @@ export const useGenerationLogic = (
     });
 
     const effectiveResolution = getEffectiveResolution(config);
+
+    const startGenerationTask = async (input: {
+        role: string;
+        prompt: string;
+        fullPrompt?: string;
+        batchId?: string | null;
+        projectId?: string | null;
+        artboardId?: string | null;
+        inputImageIds?: string[];
+    }): Promise<GenerationTask | null> => {
+        try {
+            return await createGenerationTask({
+                ...input,
+                apiProfileId: config.preferredImageApiId,
+            });
+        } catch (err) {
+            console.warn('Failed to create generation task', err);
+            return null;
+        }
+    };
+
+    const finishGenerationTask = async (task: GenerationTask | null, image: GeneratedImage, asset: any, artboardId?: string | null) => {
+        if (!task) return;
+        try {
+            await completeGenerationTask(task.id, {
+                outputImageIds: [image.id],
+                outputAssetIds: image.imageId ? [image.imageId] : [],
+                apiProfileId: asset?.usedAPI?.id || task.apiProfileId || null,
+                imageModel: asset?.usedAPI?.imageModel || task.imageModel || null,
+                artboardId: artboardId ?? task.artboardId ?? null,
+            });
+        } catch (err) {
+            console.warn('Failed to complete generation task', err);
+        }
+    };
+
+    const markGenerationTaskFailed = async (task: GenerationTask | null, err: any) => {
+        if (!task) return;
+        try {
+            await failGenerationTask(task.id, err?.message || String(err));
+        } catch (taskErr) {
+            console.warn('Failed to mark generation task failed', taskErr);
+        }
+    };
 
     const applyStickerWorkflow = async (
         skillType: string,
@@ -144,8 +189,17 @@ export const useGenerationLogic = (
 
         const batchId = `single-${Date.now()}`;
         const promptToUse = overridePrompt || constructPrompt(genConfig, false, !!layoutImageToUse);
+        let task: GenerationTask | null = null;
 
         try {
+            task = await startGenerationTask({
+                role: config.activeRole || 'designer',
+                prompt: promptToUse,
+                fullPrompt: promptToUse,
+                batchId,
+                projectId,
+            });
+
             const asset = await generateUIReference({
                 prompt: promptToUse,
                 config: genConfig,
@@ -162,12 +216,14 @@ export const useGenerationLogic = (
                 projectId,
             });
 
-            await canvas.handleSaveToHistory(newImage);
+            const savedImage = await canvas.handleSaveToHistory(newImage) ?? newImage;
 
-            canvas.setArtboards(prev => addGeneratedArtboard(prev, newImage, dims, config.pageName || 'UI'));
+            canvas.setArtboards(prev => addGeneratedArtboard(prev, savedImage, dims, config.pageName || 'UI'));
+            await finishGenerationTask(task, savedImage, asset);
 
             setProgressValue(100);
         } catch (err: any) {
+            await markGenerationTaskFailed(task, err);
             if (err?.message === "QUOTA_EXCEEDED") setError(lang === 'zh' ? '配额已耗尽' : 'Quota Exceeded');
             else setError(err.message);
         } finally { setIsGenerating(false); setTimeout(() => setProgressValue(0), 500); }
@@ -237,6 +293,7 @@ export const useGenerationLogic = (
 
         canvas.setArtboardGroups(prev => [...prev, { id: batchId, label: config.description.substring(0, 20) || `Batch`, x: groupX, y: groupY, width: 0, height: 0 }]);
 
+        let activeTask: GenerationTask | null = null;
         try {
             for (let i = 0; i < total; i++) {
                 const page = config.pages[i];
@@ -260,6 +317,14 @@ export const useGenerationLogic = (
                 }
 
                 const constructedPrompt = constructPrompt(pageConfig, false, !!page.layoutImage || !!canvas.layoutImage, false, designSystemContext);
+                activeTask = await startGenerationTask({
+                    role: config.activeRole || 'designer',
+                    prompt: constructedPrompt,
+                    fullPrompt: constructedPrompt,
+                    batchId,
+                    projectId: currentProjectId,
+                    inputImageIds: [],
+                });
 
                 const asset = await generateUIReference({
                     prompt: constructedPrompt, config: pageConfig,
@@ -278,8 +343,12 @@ export const useGenerationLogic = (
                     details: pageConfig as any,
                 });
 
+                const savedImage = await canvas.handleSaveToHistory(newImage) ?? newImage;
+
                 // Add to canvas immediately
-                canvas.setArtboards(prev => addBatchArtboard(prev, newImage, dims, page.name, batchId, localX, groupY + 60));
+                canvas.setArtboards(prev => addBatchArtboard(prev, savedImage, dims, page.name, batchId, localX, groupY + 60));
+                await finishGenerationTask(activeTask, savedImage, asset);
+                activeTask = null;
 
                 // Update group width/height
                 const currentWidth = (localX - groupX) + dims.width;
@@ -289,7 +358,7 @@ export const useGenerationLogic = (
                 completed++;
                 setProgressValue((completed / total) * 100);
             }
-        } catch (e: any) { setError(e.message); }
+        } catch (e: any) { await markGenerationTaskFailed(activeTask, e); setError(e.message); }
         finally { setIsGenerating(false); setBatchProgress(''); setProgressValue(0); }
     };
 
@@ -298,6 +367,8 @@ export const useGenerationLogic = (
         setIsGenerating(true); setProgressValue(20); setError(null);
 
         const skillResolution = resolveSkillResolution(config, skillType, skillConfig);
+        const batchId = `skill-${skillType}-${Date.now()}`;
+        let task: GenerationTask | null = null;
 
         try {
             const { buildSkillPrompt, constants } = await loadSkillPrompting();
@@ -318,6 +389,16 @@ export const useGenerationLogic = (
                 skillConfig,
             });
 
+            const inputImageIds: string[] = [];
+            task = await startGenerationTask({
+                role: skillType,
+                prompt: promptStr,
+                fullPrompt: promptStr,
+                batchId,
+                projectId: currentProjectId,
+                inputImageIds,
+            });
+
             const asset = await generateUIReference({
                 prompt: promptStr,
                 config: genConfig,
@@ -330,7 +411,7 @@ export const useGenerationLogic = (
             const stickerResult = await applyStickerWorkflow(skillType, skillConfig, asset);
             const dims = await canvas.getImageDimensions(stickerResult.asset.base64);
             const newImage = createGeneratedImage(stickerResult.asset, dims, genConfig, {
-                batchId: `skill-${skillType}-${Date.now()}`,
+                batchId,
                 originalDescription: config.description,
                 projectId: currentProjectId,
                 details: stickerResult.stickerDetails ? {
@@ -339,11 +420,13 @@ export const useGenerationLogic = (
                 } : undefined,
             });
 
-            await canvas.handleSaveToHistory(newImage);
-            canvas.setArtboards(prev => addGeneratedArtboard(prev, newImage, dims, skillType));
+            const savedImage = await canvas.handleSaveToHistory(newImage) ?? newImage;
+            canvas.setArtboards(prev => addGeneratedArtboard(prev, savedImage, dims, skillType));
+            await finishGenerationTask(task, savedImage, stickerResult.asset);
 
             setProgressValue(100);
         } catch (err: any) {
+            await markGenerationTaskFailed(task, err);
             if (err?.message === "QUOTA_EXCEEDED") setError(lang === 'zh' ? '配额已耗尽' : 'Quota Exceeded');
             else setError(err.message);
         } finally { setIsGenerating(false); setTimeout(() => setProgressValue(0), 500); }
@@ -370,6 +453,7 @@ export const useGenerationLogic = (
         const groupLabel = pages[0]?.name || config.description.substring(0, 20) || skillType;
         canvas.setArtboardGroups(prev => [...prev, { id: batchId, label: `${skillType} - ${groupLabel}`, x: groupX, y: groupY, width: 0, height: 0 }]);
 
+        let activeTask: GenerationTask | null = null;
         try {
             const { buildSkillPrompt, constants } = await loadSkillPrompting();
 
@@ -398,6 +482,15 @@ export const useGenerationLogic = (
                     skillConfig,
                 });
 
+                activeTask = await startGenerationTask({
+                    role: skillType,
+                    prompt: promptStr,
+                    fullPrompt: promptStr,
+                    batchId,
+                    projectId: currentProjectId,
+                    inputImageIds: [],
+                });
+
                 const asset = await generateUIReference({
                     prompt: promptStr,
                     config: genConfig,
@@ -418,8 +511,10 @@ export const useGenerationLogic = (
                     details: stickerResult.stickerDetails ? { sticker: stickerResult.stickerDetails } : undefined,
                 });
 
-                await canvas.handleSaveToHistory(newImage);
-                canvas.setArtboards(prev => addBatchArtboard(prev, newImage, dims, pageName, batchId, localX, groupY + 60));
+                const savedImage = await canvas.handleSaveToHistory(newImage) ?? newImage;
+                canvas.setArtboards(prev => addBatchArtboard(prev, savedImage, dims, pageName, batchId, localX, groupY + 60));
+                await finishGenerationTask(activeTask, savedImage, stickerResult.asset);
+                activeTask = null;
 
                 const currentWidth = (localX - groupX) + dims.width;
                 canvas.setArtboardGroups(prev => updateBatchGroupBounds(prev, batchId, currentWidth, dims.height));
@@ -429,6 +524,7 @@ export const useGenerationLogic = (
             }
             setProgressValue(100);
         } catch (err: any) {
+            await markGenerationTaskFailed(activeTask, err);
             if (err?.message === "QUOTA_EXCEEDED") setError(lang === 'zh' ? '配额已耗尽' : 'Quota Exceeded');
             else setError(err.message);
         } finally { setIsGenerating(false); setBatchProgress(''); setProgressValue(0); }
@@ -485,10 +581,21 @@ export const useGenerationLogic = (
         if (!prompt.trim()) { finalPrompt = constructPrompt(genConfig, !!ref, !!layout); }
         else { finalPrompt = `**PRIMARY EDIT INSTRUCTION**: ${prompt}\n\n**CONTEXT (Background Info)**: ${genConfig.description}`; }
         if (mask) finalPrompt += "\n\n**INSTRUCTION**: Edit ONLY the area designated by the provided mask. Keep the rest of the UI exactly the same.";
+        let task: GenerationTask | null = null;
 
         try {
             let editBase = ref;
             if (!editBase && regenState.mode === 'refine' && targetBoard.image.url) { editBase = targetBoard.image.url; }
+
+            task = await startGenerationTask({
+                role: config.activeRole || 'designer',
+                prompt: finalPrompt,
+                fullPrompt: finalPrompt,
+                batchId: oldDetails?.batchId || 'regen',
+                projectId: oldDetails?.projectId || null,
+                artboardId: id,
+                inputImageIds: targetBoard.image.imageId ? [targetBoard.image.imageId] : [],
+            });
 
             const asset = await generateUIReference({
                 prompt: finalPrompt, config: genConfig,
@@ -514,8 +621,10 @@ export const useGenerationLogic = (
                 }
             };
 
-            canvas.setArtboards(prev => replaceRegeneratedArtboard(prev, id, newImage, dims));
-        } catch (err: any) { setError(err.message || 'Regeneration failed'); }
+            const savedImage = await canvas.handleSaveToHistory(newImage) ?? newImage;
+            canvas.setArtboards(prev => replaceRegeneratedArtboard(prev, id, savedImage, dims));
+            await finishGenerationTask(task, savedImage, asset, id);
+        } catch (err: any) { await markGenerationTaskFailed(task, err); setError(err.message || 'Regeneration failed'); }
         finally { setIsGenerating(false); setRegeneratingId(null); }
     };
 

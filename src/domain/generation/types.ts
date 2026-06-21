@@ -1,4 +1,5 @@
 import type {
+  APIConfig,
   Artboard,
   GeneratedImage,
   GenerationConfig,
@@ -50,7 +51,7 @@ export interface GenerationCanvasState {
   setLayoutAnalysis: (s: string | null) => void;
   setArtboards: (cb: (prev: Artboard[]) => Artboard[]) => void;
   setArtboardGroups: (cb: (prev: any[]) => any[]) => void;
-  handleSaveToHistory: (img: GeneratedImage) => Promise<void>;
+  handleSaveToHistory: (img: GeneratedImage) => Promise<GeneratedImage>;
   getImageDimensions: (b: string) => Promise<{ width: number; height: number }>;
   artboardGroups: any[];
   artboards: Artboard[];
@@ -99,8 +100,10 @@ export interface RegenState {
 
 export interface GeneratedAssetResult {
   id: string;
+  imageId?: string;
   url: string;
   base64: string;
   prompt: string;
   timestamp: number;
+  usedAPI?: APIConfig;
 }

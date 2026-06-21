@@ -92,6 +92,7 @@ export const stickerItemToGeneratedImage = (
 
   return {
     id: createId('sticker'),
+    imageId: item.imageId,
     url: item.url,
     prompt: item.prompt,
     timestamp: Date.now(),

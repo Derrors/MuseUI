@@ -1,4 +1,5 @@
 import { openDB, deleteDB, DBSchema, IDBPDatabase } from 'idb';
+import type { GenerationTaskStatus, ImageAssetSource } from '../types';
 
 interface MuseUIDB extends DBSchema {
   projects: {
@@ -36,7 +37,8 @@ interface MuseUIDB extends DBSchema {
       id: string;
       projectId: string | null;
       artboardId: string | null;
-      imageData: string;
+      imageId: string | null;
+      imageData?: string;
       prompt: string | null;
       platform: string | null;
       designStyle: string | null;
@@ -48,6 +50,70 @@ interface MuseUIDB extends DBSchema {
     indexes: {
       'by-projectId': string;
       'by-artboardId': string;
+      'by-createdAt': string;
+      'by-imageId': string;
+    };
+  };
+  imageAssets: {
+    key: string;
+    value: {
+      id: string;
+      dataUrl: string;
+      hash: string;
+      mimeType: string;
+      width?: number;
+      height?: number;
+      source: ImageAssetSource;
+      createdAt: string;
+    };
+    indexes: {
+      'by-hash': string;
+      'by-createdAt': string;
+    };
+  };
+  imageThumbnails: {
+    key: string;
+    value: {
+      id: string;
+      imageId: string;
+      dataUrl: string;
+      width: number;
+      height: number;
+      version: number;
+      createdAt: string;
+    };
+    indexes: {
+      'by-imageId': string;
+    };
+  };
+  generationTasks: {
+    key: string;
+    value: {
+      id: string;
+      status: GenerationTaskStatus;
+      role: string;
+      prompt: string;
+      fullPrompt?: string;
+      apiProfileId?: string | null;
+      textModel?: string | null;
+      imageModel?: string | null;
+      inputImageIds: string[];
+      outputImageIds: string[];
+      outputAssetIds: string[];
+      error?: string | null;
+      createdAt: string;
+      startedAt?: string;
+      finishedAt?: string;
+      elapsedMs?: number | null;
+      projectId?: string | null;
+      artboardId?: string | null;
+      batchId?: string | null;
+    };
+    indexes: {
+      'by-status': GenerationTaskStatus;
+      'by-projectId': string;
+      'by-artboardId': string;
+      'by-batchId': string;
       'by-createdAt': string;
     };
   };
@@ -73,8 +139,8 @@ let dbPromise: Promise<IDBPDatabase<MuseUIDB>> | null = null;
 
 export function getDB(): Promise<IDBPDatabase<MuseUIDB>> {
   if (!dbPromise) {
-    dbPromise = openDB<MuseUIDB>('muse-ui-db', 4, {
-      upgrade(db) {
+    dbPromise = openDB<MuseUIDB>('muse-ui-db', 5, {
+      upgrade(db, _oldVersion, _newVersion, transaction) {
         if (!db.objectStoreNames.contains('projects')) {
           const projectStore = db.createObjectStore('projects', { keyPath: 'id' });
           projectStore.createIndex('by-updatedAt', 'updatedAt');
@@ -85,11 +151,40 @@ export function getDB(): Promise<IDBPDatabase<MuseUIDB>> {
           artboardStore.createIndex('by-projectId', 'projectId');
         }
 
-        if (!db.objectStoreNames.contains('generatedAssets')) {
-          const assetStore = db.createObjectStore('generatedAssets', { keyPath: 'id' });
+        const assetStore = db.objectStoreNames.contains('generatedAssets')
+          ? transaction.objectStore('generatedAssets')
+          : db.createObjectStore('generatedAssets', { keyPath: 'id' });
+        if (!assetStore.indexNames.contains('by-projectId')) {
           assetStore.createIndex('by-projectId', 'projectId');
+        }
+        if (!assetStore.indexNames.contains('by-artboardId')) {
           assetStore.createIndex('by-artboardId', 'artboardId');
+        }
+        if (!assetStore.indexNames.contains('by-createdAt')) {
           assetStore.createIndex('by-createdAt', 'createdAt');
+        }
+        if (!assetStore.indexNames.contains('by-imageId')) {
+          assetStore.createIndex('by-imageId', 'imageId');
+        }
+
+        if (!db.objectStoreNames.contains('imageAssets')) {
+          const imageAssetStore = db.createObjectStore('imageAssets', { keyPath: 'id' });
+          imageAssetStore.createIndex('by-hash', 'hash', { unique: true });
+          imageAssetStore.createIndex('by-createdAt', 'createdAt');
+        }
+
+        if (!db.objectStoreNames.contains('imageThumbnails')) {
+          const imageThumbnailStore = db.createObjectStore('imageThumbnails', { keyPath: 'id' });
+          imageThumbnailStore.createIndex('by-imageId', 'imageId', { unique: true });
+        }
+
+        if (!db.objectStoreNames.contains('generationTasks')) {
+          const generationTaskStore = db.createObjectStore('generationTasks', { keyPath: 'id' });
+          generationTaskStore.createIndex('by-status', 'status');
+          generationTaskStore.createIndex('by-projectId', 'projectId');
+          generationTaskStore.createIndex('by-artboardId', 'artboardId');
+          generationTaskStore.createIndex('by-batchId', 'batchId');
+          generationTaskStore.createIndex('by-createdAt', 'createdAt');
         }
 
         if (!db.objectStoreNames.contains('layoutPresets')) {

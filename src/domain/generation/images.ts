@@ -14,6 +14,7 @@ export const createGeneratedImage = (
   },
 ): GeneratedImage => ({
   id: asset.id,
+  imageId: asset.imageId,
   url: asset.url,
   prompt: options.prompt ?? asset.prompt,
   timestamp: asset.timestamp,

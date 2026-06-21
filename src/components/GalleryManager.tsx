@@ -5,6 +5,7 @@ import { I18N } from '../constants';
 import DesignSpecRenderer from './DesignSpecRenderer';
 import JSZip from 'jszip';
 import { getHistoryPaginated, saveImageToHistory } from '../services/idbHistoryService';
+import { storeImageAsset } from '../services/imageAssetService';
 import {
     buildStickerZipBlob,
     getStickerDownloadItems,
@@ -359,8 +360,9 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
                 reader.readAsDataURL(file);
             }));
 
-            Promise.all(promises).then((newImages) => {
-                onUpdateHistory([...newImages, ...history]);
+            Promise.all(promises).then(async (newImages) => {
+                const savedImages = await Promise.all(newImages.map(image => saveImageToHistory(image)));
+                onUpdateHistory([...savedImages, ...history]);
             });
         }
     };
@@ -370,14 +372,22 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
     };
 
     const updateGalleryImage = async (updated: GeneratedImage) => {
-        const replace = (items: GeneratedImage[]) => items.map(img => img.id === updated.id ? updated : img);
+        const saved = await saveImageToHistory(updated);
+        const replace = (items: GeneratedImage[]) => items.map(img => img.id === updated.id ? saved : img);
         const nextHistory = replace(history);
         const nextLocalHistory = replace(localHistory);
         setLocalHistory(nextLocalHistory);
         onUpdateHistory(nextHistory);
-        setZoomedImage(prev => prev?.id === updated.id ? updated : prev);
-        await saveImageToHistory(updated);
+        setZoomedImage(prev => prev?.id === updated.id ? saved : prev);
     };
+
+    const persistStickerItems = async (items: StickerAssetItem[]): Promise<StickerAssetItem[]> => (
+        Promise.all(items.map(async item => {
+            if (item.imageId) return item;
+            const asset = await storeImageAsset(item.url, 'sticker');
+            return { ...item, imageId: asset.id };
+        }))
+    );
 
     const handleRepairZoomedSticker = async () => {
         if (!zoomedImage || !isStickerImage(zoomedImage)) return;
@@ -420,10 +430,11 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
             if (result.items.length === 0) {
                 throw new Error(lang === 'zh' ? '没有检测到可拆分的贴纸' : 'No separable stickers detected');
             }
-            const updated = withStickerCollectionItems(zoomedImage, result.items, 'auto');
+            const items = await persistStickerItems(result.items);
+            const updated = withStickerCollectionItems(zoomedImage, items, 'auto');
             await updateGalleryImage(updated);
-            setLastSplitResult({ imageId: updated.id, itemIds: result.items.map(item => item.id), count: result.items.length, method: 'auto' });
-            notify(lang === 'zh' ? `已拆分 ${result.items.length} 个贴纸` : `Split ${result.items.length} stickers`, 'success');
+            setLastSplitResult({ imageId: updated.id, itemIds: items.map(item => item.id), count: items.length, method: 'auto' });
+            notify(lang === 'zh' ? `已拆分 ${items.length} 个贴纸` : `Split ${items.length} stickers`, 'success');
         } catch (err: any) {
             notify(err?.message || (lang === 'zh' ? '自动拆分失败' : 'Auto split failed'), 'error');
         } finally {
@@ -438,10 +449,11 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
         setStickerOperation('grid-split');
         try {
             const result = await splitStickerCollectionByGridDetailed(zoomedImage.url, gridSplit.rows, gridSplit.columns);
-            const updated = withStickerCollectionItems(zoomedImage, result.items, 'manual');
+            const items = await persistStickerItems(result.items);
+            const updated = withStickerCollectionItems(zoomedImage, items, 'manual');
             await updateGalleryImage(updated);
-            setLastSplitResult({ imageId: updated.id, itemIds: result.items.map(item => item.id), count: result.items.length, method: 'manual' });
-            notify(lang === 'zh' ? `已按网格拆分 ${result.items.length} 个贴纸` : `Grid split ${result.items.length} stickers`, 'success');
+            setLastSplitResult({ imageId: updated.id, itemIds: items.map(item => item.id), count: items.length, method: 'manual' });
+            notify(lang === 'zh' ? `已按网格拆分 ${items.length} 个贴纸` : `Grid split ${items.length} stickers`, 'success');
         } catch (err: any) {
             notify(err?.message || (lang === 'zh' ? '网格拆分失败' : 'Grid split failed'), 'error');
         } finally {

@@ -320,6 +320,7 @@ export interface GenerationConfig {
 
 export interface GeneratedImage {
   id: string;
+  imageId?: string;
   url: string; // Base64 data URL
   prompt: string;
   timestamp: number;
@@ -367,6 +368,7 @@ export interface StickerSplitSource {
 
 export interface StickerAssetItem {
   id: string;
+  imageId?: string;
   url: string;
   prompt: string;
   splitIndex: number;
@@ -407,6 +409,53 @@ export interface Artboard {
 
 export type AIProvider = 'openai';
 export type OpenAIImageMode = 'images' | 'chat' | 'auto';
+
+export type ImageAssetSource = 'generated' | 'uploaded' | 'sticker' | 'thumbnail' | 'imported';
+
+export interface ImageAsset {
+  id: string;
+  dataUrl: string;
+  hash: string;
+  mimeType: string;
+  width?: number;
+  height?: number;
+  source: ImageAssetSource;
+  createdAt: string;
+}
+
+export interface ImageThumbnail {
+  id: string;
+  imageId: string;
+  dataUrl: string;
+  width: number;
+  height: number;
+  version: number;
+  createdAt: string;
+}
+
+export type GenerationTaskStatus = 'running' | 'done' | 'error';
+
+export interface GenerationTask {
+  id: string;
+  status: GenerationTaskStatus;
+  role: CreatorRole | SkillType | string;
+  prompt: string;
+  fullPrompt?: string;
+  apiProfileId?: string | null;
+  textModel?: string | null;
+  imageModel?: string | null;
+  inputImageIds: string[];
+  outputImageIds: string[];
+  outputAssetIds: string[];
+  error?: string | null;
+  createdAt: string;
+  startedAt?: string;
+  finishedAt?: string;
+  elapsedMs?: number | null;
+  projectId?: string | null;
+  artboardId?: string | null;
+  batchId?: string | null;
+}
 
 export interface APIConfig {
   id: string;

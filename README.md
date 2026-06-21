@@ -33,6 +33,13 @@ The app is a static Vite + React SPA. It has no backend, no authentication, and 
 
 ## Change Log
 
+### 2026-06-21
+
+- Upgraded local persistence with separate IndexedDB stores for image assets, thumbnails, and generation tasks.
+- Added generation task records for image creation flows, including prompt, API profile, model metadata, output image ids, and image asset ids.
+- Added Docker packaging with an Nginx static runtime and optional `/api-proxy/` forwarding for self-hosted deployments.
+- Added a release workflow for tagged builds, web artifacts, and GHCR Docker images.
+
 ### 2026-06-20
 
 - Refactored generation logic into focused domain modules for generation config, generated image metadata, skill prompting, canvas artboard transforms, project snapshots, and API profile normalization.
@@ -62,6 +69,30 @@ npm run dev
 ```
 
 The development server runs on `http://localhost:3003` by default.
+
+### Docker Deployment
+
+Build and run the static web image:
+
+```bash
+docker build -t muse-ui .
+docker run --rm -p 3003:80 muse-ui
+```
+
+Open `http://localhost:3003`.
+
+MuseUI is still a browser-first app. The Docker image serves the built SPA with Nginx; it does not add a server database or authentication layer.
+
+Optional API proxy for self-hosted environments:
+
+```bash
+docker run --rm -p 3003:80 \
+  -e ENABLE_API_PROXY=true \
+  -e API_PROXY_URL=https://api.openai.com/v1 \
+  muse-ui
+```
+
+Then configure a MuseUI API profile with Base URL `/api-proxy`. Use this only when you intentionally want the container to forward API requests.
 
 ### Configure AI APIs
 

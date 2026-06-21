@@ -335,7 +335,7 @@ export const generateUIReference = async (params: GenerateUIParams): Promise<any
     const height = params.config.customSize.active ? params.config.customSize.height : params.config.resolution.height;
     const aspectRatio = getAspectRatio(width, height);
 
-    const { url } = await callImageAPI({
+    const { url, usedAPI } = await callImageAPI({
         prompt: finalPrompt,
         aspectRatio,
         preferredApiId: params.preferredImageApiId || undefined,
@@ -353,6 +353,7 @@ export const generateUIReference = async (params: GenerateUIParams): Promise<any
     return {
         id, url, base64: url,
         prompt: params.prompt, timestamp: Date.now(),
+        usedAPI,
         details: {
             platform: params.config.platform,
             resolution: `${params.config.resolution.width}x${params.config.resolution.height}`,

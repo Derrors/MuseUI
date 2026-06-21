@@ -31,6 +31,13 @@ MuseUI 是一个纯浏览器运行的 AI 界面与图像设计生成器。它可
 
 ## 更新日志
 
+### 2026-06-21
+
+- 升级本地持久化结构，新增独立的 IndexedDB 图片资产、缩略图和生成任务存储。
+- 为图像生成流程增加生成任务记录，保存 prompt、API Profile、模型元数据、输出图片 ID 和图片资产 ID。
+- 增加 Docker 打包方式，使用 Nginx 运行静态产物，并提供可选 `/api-proxy/` 转发能力用于自托管部署。
+- 增加 tag 发布工作流，支持网页产物和 GHCR Docker 镜像发布。
+
 ### 2026-06-20
 
 - 将生成逻辑重构为更清晰的领域模块，包括生成配置、生成图片元数据、技能提示词、画布画板变换、项目快照和 API Profile 归一化。
@@ -60,6 +67,30 @@ npm run dev
 ```
 
 开发服务器默认运行在 `http://localhost:3003`。
+
+### Docker 部署
+
+构建并运行静态 Web 镜像：
+
+```bash
+docker build -t muse-ui .
+docker run --rm -p 3003:80 muse-ui
+```
+
+然后打开 `http://localhost:3003`。
+
+MuseUI 仍然是浏览器优先的应用。Docker 镜像只用 Nginx 提供构建后的 SPA，不会新增服务器数据库或登录系统。
+
+自托管环境可按需开启 API 代理：
+
+```bash
+docker run --rm -p 3003:80 \
+  -e ENABLE_API_PROXY=true \
+  -e API_PROXY_URL=https://api.openai.com/v1 \
+  muse-ui
+```
+
+然后在 MuseUI API Profile 中把 Base URL 配置为 `/api-proxy`。只有在你明确希望容器转发 API 请求时才建议启用。
 
 ### 配置 AI API
 

@@ -1,6 +1,7 @@
-import { Artboard, GeneratedImage, StudioType } from '../types';
+import { Artboard, GeneratedImage, ImageAssetSource, StudioType } from '../types';
 import { getDB } from './db';
 import { createId } from '../utils/id';
+import { deleteImageAssetIfUnreferenced, getImageDataUrl, storeImageAsset } from './imageAssetService';
 
 export interface Project {
   id: string;
@@ -19,6 +20,33 @@ const normalizeProject = (p: any): Project => ({
   ...p,
   studioType: p.studioType || 'ui-designer',
 });
+
+const inferImageSource = (image: GeneratedImage): ImageAssetSource => {
+  if (image.details?.sticker) return 'sticker';
+  if (image.id.startsWith('upload-')) return 'uploaded';
+  if (image.id.startsWith('imported-')) return 'imported';
+  return 'generated';
+};
+
+const assetToImage = async (asset: any): Promise<GeneratedImage> => {
+  const imageId = asset.imageId || undefined;
+  const url = imageId ? (await getImageDataUrl(imageId)) || asset.imageData || '' : asset.imageData || '';
+  return {
+    id: asset.id,
+    imageId,
+    url,
+    prompt: asset.prompt || '',
+    timestamp: new Date(asset.createdAt).getTime(),
+    details: asset.metaData,
+  };
+};
+
+const persistImageReference = async (image: GeneratedImage): Promise<string | null> => {
+  if (image.imageId) return image.imageId;
+  if (!image.url) return null;
+  const asset = await storeImageAsset(image.url, inferImageSource(image));
+  return asset.id;
+};
 
 export const getProjects = async (): Promise<Project[]> => {
   const db = await getDB();
@@ -62,18 +90,13 @@ export const getProjectById = async (id: string): Promise<Project> => {
     const assets = await db.getAllFromIndex('generatedAssets', 'by-artboardId', ab.id);
     const sortedAssets = assets.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-    const mainAsset = sortedAssets.find(a => a.isFavorite) || sortedAssets[0];
-    const image: GeneratedImage | undefined = mainAsset
-      ? { id: mainAsset.id, url: mainAsset.imageData, prompt: mainAsset.prompt || '', timestamp: new Date(mainAsset.createdAt).getTime(), details: mainAsset.metaData }
-      : undefined;
+    const history = (await Promise.all(sortedAssets.map(assetToImage)))
+      .filter(image => Boolean(image.url || image.details?.designSystem));
+    const favoriteAsset = sortedAssets.find(a => a.isFavorite);
+    const favoriteImage = favoriteAsset ? await assetToImage(favoriteAsset) : undefined;
+    const image: GeneratedImage | undefined = favoriteImage || history[0];
 
-    const history: GeneratedImage[] = sortedAssets.map(a => ({
-      id: a.id,
-      url: a.imageData,
-      prompt: a.prompt || '',
-      timestamp: new Date(a.createdAt).getTime(),
-      details: a.metaData,
-    }));
+    if (!image) continue;
 
     artboards.push({
       id: ab.id,
@@ -141,18 +164,28 @@ export const saveProject = async (
       }
 
       for (const img of allImages) {
-        if (!img.id || !img.url) continue;
+        if (!img.id || (!img.url && !img.imageId && !img.details?.designSystem)) continue;
+        const imageId = await persistImageReference(img);
         const existing = await db.get('generatedAssets', img.id);
         if (existing) {
           // Update artboardId/projectId linkage
-          await db.put('generatedAssets', { ...existing, artboardId: ab.id, projectId: id });
+          await db.put('generatedAssets', {
+            ...existing,
+            artboardId: ab.id,
+            projectId: id,
+            imageId,
+            prompt: img.prompt || existing.prompt || null,
+            platform: img.details?.platform || existing.platform || null,
+            designStyle: img.details?.style || existing.designStyle || null,
+            metaData: img.details || existing.metaData || {},
+          });
         } else {
-          // Create new asset record — image was never persisted to IndexedDB
+          // Create new asset record — image was never persisted to IndexedDB.
           await db.put('generatedAssets', {
             id: img.id,
             projectId: id,
             artboardId: ab.id,
-            imageData: img.url,
+            imageId,
             prompt: img.prompt || null,
             platform: img.details?.platform || null,
             designStyle: img.details?.style || null,
@@ -178,6 +211,7 @@ export const deleteProject = async (id: string): Promise<void> => {
   const assets = await db.getAllFromIndex('generatedAssets', 'by-projectId', id);
   for (const asset of assets) {
     await db.delete('generatedAssets', asset.id);
+    if (asset.imageId) await deleteImageAssetIfUnreferenced(asset.imageId);
   }
   await db.delete('projects', id);
 };
