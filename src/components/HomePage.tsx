@@ -93,16 +93,16 @@ const HomePage: React.FC = () => {
 
     return (
         <ThemeProvider appearance={theme}>
-        <div className={`min-h-screen bg-[var(--gray-1)] text-[var(--gray-12)] flex flex-col font-sans ${theme}`}>
-            <div className="flex-1 flex flex-col max-w-7xl mx-auto w-full p-6 md:p-12">
-                <div className="flex justify-between items-center mb-10">
-                    <div className="flex items-center gap-4">
+        <div className={`muse-app-shell min-h-screen text-[var(--gray-12)] flex flex-col font-sans ${theme}`}>
+            <div className="flex-1 flex flex-col max-w-7xl mx-auto w-full p-4 md:p-8">
+                <div className="muse-panel mb-8 flex flex-col gap-5 rounded-[28px] p-4 md:flex-row md:items-center md:justify-between md:p-6">
+                    <div className="flex items-center gap-4 min-w-0">
                         <div className="relative">
                             <DropdownMenuShell
                                 align="start"
                                 trigger={(
-                                    <button className="w-12 h-12 rounded-full overflow-hidden hover:shadow-lg transition-shadow">
-                                        <img src="/logo.png" alt="MuseUI" className="w-full h-full object-cover" />
+                                    <button className="muse-brand-mark h-14 w-14 overflow-hidden rounded-2xl p-[2px] transition-transform hover:-translate-y-0.5">
+                                        <img src="/logo.png" alt="MuseUI" className="h-full w-full rounded-[14px] object-cover bg-white" />
                                     </button>
                                 )}
                                 items={[
@@ -124,17 +124,22 @@ const HomePage: React.FC = () => {
                                 ]}
                             />
                         </div>
-                        <div>
-                            <h1 className="text-2xl font-bold">MuseUI</h1>
-                            <p className="text-xs text-[var(--gray-10)]">{lang === 'zh' ? '我的项目' : 'My Projects'}</p>
+                        <div className="min-w-0">
+                            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">MuseUI</h1>
+                            <p className="text-xs font-bold uppercase tracking-wide text-[var(--accent-11)]">{lang === 'zh' ? '我的项目' : 'My Projects'}</p>
                             <p className="text-[var(--gray-11)] text-sm">
                                 {projects.length} {lang === 'zh' ? '个项目' : 'Projects'} · {lang === 'zh' ? '最近更新' : 'Recently updated'}
                             </p>
                         </div>
                     </div>
-                    <Button onClick={handleCreateProject} size="3" color="ruby" iconName="plus">
-                        {lang === 'zh' ? '新建项目' : 'New Project'}
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button onClick={() => setShowApiKeyConfig(true)} size="3" variant="soft" color="gray" iconName="settings" className="rounded-full">
+                            API
+                        </Button>
+                        <Button onClick={handleCreateProject} size="3" color="ruby" iconName="plus" className="muse-gradient-action rounded-full">
+                            {lang === 'zh' ? '新建项目' : 'New Project'}
+                        </Button>
+                    </div>
                 </div>
 
                 {isLoading ? (
@@ -142,31 +147,31 @@ const HomePage: React.FC = () => {
                         <div className="animate-spin text-stone-300"><IconLoader name="loader" size={48} /></div>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
-                        <Card onClick={handleCreateProject} className="aspect-[4/3] border-2 border-dashed border-[var(--gray-6)] hover:border-[var(--accent-7)] bg-[var(--gray-2)] flex flex-col items-center justify-center gap-3 cursor-pointer group transition-all">
-                            <div className="w-12 h-12 rounded-full bg-[var(--accent-3)] text-[var(--accent-10)] group-hover:scale-110 transition-transform flex items-center justify-center">
+                    <div className="grid grid-cols-1 gap-5 pb-20 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        <Card onClick={handleCreateProject} className="muse-panel muse-card-hover group flex aspect-[4/3] cursor-pointer flex-col items-center justify-center gap-3 rounded-3xl border-2 border-dashed border-[var(--muse-border-strong)]">
+                            <div className="muse-brand-mark flex h-14 w-14 items-center justify-center rounded-2xl text-white transition-transform group-hover:scale-105">
                                 <IconLoader name="plus" size={24} />
                             </div>
-                            <span className="font-bold text-[var(--gray-11)] group-hover:text-[var(--accent-11)] transition-colors">
+                            <span className="font-bold text-[var(--gray-11)] transition-colors group-hover:text-[var(--accent-11)]">
                                 {lang === 'zh' ? '创建空白项目' : 'Create Blank Project'}
                             </span>
                         </Card>
                         {projects.map(project => {
                             const studio = getStudio(project.studioType);
                             return (
-                            <Card key={project.id} onClick={() => window.open(`/editor/${project.id}`, '_blank')} className="group relative aspect-[4/3] overflow-hidden cursor-pointer transition-all hover:-translate-y-1 hover:shadow-xl">
-                                <div className="h-2/3 bg-[var(--gray-4)] relative overflow-hidden">
+                            <Card key={project.id} onClick={() => window.open(`/editor/${project.id}`, '_blank')} className="muse-panel muse-card-hover group relative aspect-[4/3] cursor-pointer overflow-hidden rounded-3xl p-0">
+                                <div className="relative h-2/3 overflow-hidden bg-[var(--gray-4)]">
                                     {project.thumbnailUrl ? (
                                         <img src={project.thumbnailUrl} alt={project.name} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-stone-300 dark:text-stone-600"><IconLoader name="image" size={32} /></div>
+                                        <div className="flex h-full w-full items-center justify-center bg-[var(--muse-canvas-bg)] text-[var(--gray-8)]"><IconLoader name="image" size={34} /></div>
                                     )}
-                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                                    <Badge color="ruby" variant="soft" className="absolute top-2 left-2 backdrop-blur-sm">
+                                    <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/10" />
+                                    <Badge color="ruby" variant="soft" className="absolute left-3 top-3 shadow-lg backdrop-blur-sm">
                                         {lang === 'zh' ? studio.name_zh : studio.name}
                                     </Badge>
                                 </div>
-                                <div className="h-1/3 p-4 flex flex-col justify-between">
+                                <div className="flex h-1/3 flex-col justify-between p-4">
                                     <div className="flex justify-between items-start">
                                         {renamingProjectId === project.id ? (
                                             <TextFieldControl
@@ -178,7 +183,7 @@ const HomePage: React.FC = () => {
                                                 className="font-bold"
                                             />
                                         ) : (
-                                            <h3 className="font-bold text-stone-800 dark:text-stone-100 truncate flex-1 pr-2" title={project.name}>{project.name}</h3>
+                                            <h3 className="flex-1 truncate pr-2 font-bold text-[var(--gray-12)]" title={project.name}>{project.name}</h3>
                                         )}
                                         <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
                                             <button onClick={(e) => { e.stopPropagation(); setRenamingProjectId(project.id); setRenameValue(project.name); }} className="text-stone-400 hover:text-teal-500 p-1" title={lang === 'zh' ? '重命名' : 'Rename'}>
@@ -189,7 +194,7 @@ const HomePage: React.FC = () => {
                                             </button>
                                         </div>
                                     </div>
-                                    <p className="text-xs text-stone-400">{new Date(project.updatedAt).toLocaleDateString()}</p>
+                                    <p className="text-xs text-[var(--gray-9)]">{new Date(project.updatedAt).toLocaleDateString()}</p>
                                 </div>
                             </Card>
                             );

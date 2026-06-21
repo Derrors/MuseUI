@@ -386,9 +386,9 @@ const CanvasBoard: React.FC<Props> = ({
     const handleSpecUpdate = (id: string, newDs: DesignSystem) => { if (onUpdateArtboard) { const target = artboards.find(a => a.id === id); if (target && target.image.details) { onUpdateArtboard(id, { image: { ...target.image, details: { ...target.image.details, designSystem: newDs } } }); } } };
 
     return (
-        <div className="relative w-full h-full overflow-hidden bg-[#e5e5e5] dark:bg-[#1c1917] select-none">
-            <div ref={dotGridRef} className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, #888 1px, transparent 1px)', backgroundSize: `${Math.max(2, 20 * scale)}px ${Math.max(2, 20 * scale)}px`, backgroundPosition: `${position?.x ?? 0}px ${position?.y ?? 0}px`, transition: 'opacity 0.15s ease-out' }} />
-            {isDragOver && (<div className="absolute inset-0 bg-teal-500/20 z-50 flex items-center justify-center border-4 border-teal-500 border-dashed pointer-events-none"><span className="text-2xl font-bold text-teal-600 bg-white/80 px-4 py-2 rounded">{lang === 'zh' ? '释放以上传图片到画布' : 'Drop to add image to canvas'}</span></div>)}
+        <div className="muse-canvas-surface relative w-full h-full overflow-hidden select-none">
+            <div ref={dotGridRef} className="absolute inset-0 opacity-70 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, var(--muse-grid-dot) 1px, transparent 1px)', backgroundSize: `${Math.max(2, 20 * scale)}px ${Math.max(2, 20 * scale)}px`, backgroundPosition: `${position?.x ?? 0}px ${position?.y ?? 0}px`, transition: 'opacity 0.15s ease-out' }} />
+            {isDragOver && (<div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center border-4 border-dashed border-[var(--accent-8)] bg-[var(--accent-4)]/35 backdrop-blur-sm"><span className="muse-floating-toolbar rounded-2xl px-5 py-3 text-xl font-bold text-[var(--accent-11)]">{lang === 'zh' ? '释放以上传图片到画布' : 'Drop to add image to canvas'}</span></div>)}
 
             <div ref={containerRef} className={`w-full h-full touch-none ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`} onMouseDown={(e) => handleMouseDown(e)} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onTouchCancel={handleTouchEnd} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
                 <div
@@ -396,8 +396,8 @@ const CanvasBoard: React.FC<Props> = ({
                     style={{ transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`, transformOrigin: '0 0', willChange: 'transform' }}
                 >
                     {groups.map(group => (
-                        <div key={group.id} style={{ position: 'absolute', left: group.x - 20, top: group.y - 40, width: group.width + 40, height: group.height + 60 }} className="border-2 border-dashed border-stone-300 dark:border-stone-700 rounded-xl pointer-events-none bg-stone-100/50 dark:bg-stone-800/30">
-                            <div className="absolute -top-12 left-0 text-lg font-bold text-stone-400 uppercase tracking-widest bg-stone-200 dark:bg-stone-800 px-4 py-1.5 rounded-lg shadow-sm">{group.label}</div>
+                        <div key={group.id} style={{ position: 'absolute', left: group.x - 20, top: group.y - 40, width: group.width + 40, height: group.height + 60 }} className="pointer-events-none rounded-2xl border-2 border-dashed border-[var(--muse-border-strong)] bg-[var(--muse-surface-muted)]/70">
+                            <div className="muse-panel-quiet absolute -top-12 left-0 rounded-xl px-4 py-1.5 text-lg font-bold uppercase tracking-widest text-[var(--gray-10)]">{group.label}</div>
                         </div>
                     ))}
                     {artboards.map(board => (
@@ -423,7 +423,7 @@ const CanvasBoard: React.FC<Props> = ({
                                 },
                             ]}
                         >
-                        <div style={{ position: 'absolute', left: board.x, top: board.y, width: board.width, height: board.height, contain: 'layout style' }} className={`bg-white shadow-md dark:shadow-black/40 group hover:ring-2 ring-[var(--accent-8)]/50 ${movingArtboard === board.id ? 'ring-4 ring-[var(--accent-8)] cursor-grabbing z-50' : 'cursor-grab'} rounded-lg ${board.isNew ? 'flash-new' : ''}`} onMouseDown={(e) => handleMouseDown(e, board.id)} onDoubleClick={(e) => handleDoubleClick(e, board.id)}>
+                        <div style={{ position: 'absolute', left: board.x, top: board.y, width: board.width, height: board.height, contain: 'layout style' }} className={`group rounded-xl border border-black/5 bg-white shadow-2xl shadow-slate-900/12 dark:border-white/10 dark:bg-stone-950 dark:shadow-black/50 hover:ring-2 ring-[var(--accent-8)]/50 ${movingArtboard === board.id ? 'ring-4 ring-[var(--accent-8)] cursor-grabbing z-50' : 'cursor-grab'} ${board.isNew ? 'flash-new' : ''}`} onMouseDown={(e) => handleMouseDown(e, board.id)} onDoubleClick={(e) => handleDoubleClick(e, board.id)}>
 
                             {/* Floating Toolbar & Label */}
                             <div
@@ -432,7 +432,7 @@ const CanvasBoard: React.FC<Props> = ({
                             >
                                 <div
                                     style={{ transform: `scale(${Math.min(5, 1 / Math.max(0.01, scale))})`, transformOrigin: 'bottom left' }}
-                                    className="bg-white dark:bg-stone-800 shadow-lg border border-stone-200 dark:border-stone-700 rounded-lg flex items-center p-1.5 gap-2 transition-[opacity,transform] opacity-100 translate-y-0 md:opacity-0 md:group-hover:opacity-100 md:translate-y-2 md:group-hover:translate-y-0 duration-200"
+                                    className="muse-floating-toolbar flex items-center gap-2 rounded-xl p-1.5 opacity-100 translate-y-0 transition-[opacity,transform] duration-200 md:opacity-0 md:group-hover:opacity-100 md:translate-y-2 md:group-hover:translate-y-0"
                                 >
                                     {/* Editable Label */}
                                     <div className="flex items-center">
@@ -458,7 +458,7 @@ const CanvasBoard: React.FC<Props> = ({
                                         )}
                                     </div>
 
-                                    <div className="w-px h-3 bg-stone-300 dark:bg-stone-600"></div>
+                                    <div className="h-3 w-px bg-[var(--muse-border-strong)]"></div>
 
                                     {/* Toolbar Actions */}
                                     <div className="flex items-center gap-1">
@@ -571,7 +571,7 @@ const CanvasBoard: React.FC<Props> = ({
                             {/* Content */}
                             {
                                 board.image.details?.designSystem ? (
-                                    <div className="w-full h-full flex flex-col bg-white overflow-hidden rounded-lg border border-stone-200 dark:border-stone-800">
+                                    <div className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-[var(--muse-border)] bg-white">
                                         <div
                                             className="h-4 bg-stone-100 dark:bg-stone-800 border-b border-stone-200 dark:border-stone-700 flex items-center justify-center cursor-grab active:cursor-grabbing hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-colors z-20"
                                             onMouseDown={(e) => handleMouseDown(e, board.id)}
@@ -583,7 +583,7 @@ const CanvasBoard: React.FC<Props> = ({
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="w-full h-full bg-white/50 flex items-center justify-center pointer-events-none rounded-lg overflow-hidden">
+                                    <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-xl bg-white/70 pointer-events-none dark:bg-stone-950/70">
                                         <img src={board.image.url} alt={board.label} className="w-full h-full object-contain" />
                                     </div>
                                 )
@@ -598,7 +598,7 @@ const CanvasBoard: React.FC<Props> = ({
             </div>
 
             {/* Controls */}
-            <Flex align="center" gap="2" className="absolute bottom-3 left-3 right-3 flex-wrap rounded-xl border border-[var(--gray-5)] bg-[var(--color-panel-solid)] p-2 shadow-xl md:bottom-6 md:left-auto md:right-6 md:flex-nowrap">
+            <Flex align="center" gap="2" className="muse-floating-toolbar absolute bottom-3 left-3 right-3 flex-wrap rounded-2xl p-2 md:bottom-6 md:left-auto md:right-6 md:flex-nowrap">
                 <IconButton iconName="zoom-out" label={lang === 'zh' ? '缩小' : 'Zoom out'} variant="soft" color="gray" onClick={() => setScale(s => Math.max(0.1, s - 0.1))} />
                 <Text size="2" weight="bold" className="w-12 text-center font-mono">{Math.round(scale * 100)}%</Text>
                 <IconButton iconName="zoom-in" label={lang === 'zh' ? '放大' : 'Zoom in'} variant="soft" color="gray" onClick={() => setScale(s => Math.min(5, s + 0.1))} />
@@ -608,7 +608,17 @@ const CanvasBoard: React.FC<Props> = ({
                 <Button onClick={resetView} size="2" variant="soft" color="gray">{t.resetView}</Button>
             </Flex>
 
-            {artboards.length === 0 && (<div className="absolute inset-0 flex items-center justify-center pointer-events-none"><div className="text-center text-stone-400 dark:text-stone-600"><div className="mb-4 flex justify-center"><IconLoader name="palette" size={64} /></div><h2 className="text-xl font-bold mb-2">{t.ready}</h2><p>{t.readyDesc}</p></div></div>)}
+            {artboards.length === 0 && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6">
+                    <div className="muse-empty-state max-w-md rounded-3xl px-8 py-7 text-center">
+                        <div className="muse-brand-mark mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl text-white">
+                            <IconLoader name="palette" size={34} />
+                        </div>
+                        <h2 className="mb-2 text-xl font-bold text-[var(--gray-12)]">{t.ready}</h2>
+                        <p className="text-sm leading-relaxed text-[var(--gray-10)]">{t.readyDesc}</p>
+                    </div>
+                </div>
+            )}
 
             {
                 historyModalOpen && (() => {

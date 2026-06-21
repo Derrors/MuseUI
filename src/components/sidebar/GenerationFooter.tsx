@@ -53,8 +53,8 @@ const GenerationFooter: React.FC<Props> = (props) => {
     : (props.lang === 'zh' ? '未配置图片 API' : 'No image API');
 
   return (
-  <div className="z-20 border-t border-[var(--gray-5)] bg-[var(--color-panel-solid)] p-4">
-    <div className="mb-3 rounded-lg border border-[var(--gray-5)] bg-[var(--gray-2)] px-3 py-2">
+  <div className="z-20 border-t border-[var(--muse-border)] bg-[var(--muse-surface-strong)] p-4 md:rounded-b-[20px]">
+    <div className="muse-panel-quiet mb-3 rounded-2xl px-3 py-2.5">
       <div className="flex items-center justify-between gap-3 text-[10px] uppercase tracking-wide text-[var(--gray-10)]">
         <span>{props.lang === 'zh' ? '当前任务' : 'Current task'}</span>
         <span className="truncate">{imageApiLabel}</span>
@@ -94,16 +94,17 @@ const GenerationFooter: React.FC<Props> = (props) => {
     <Button
       onClick={props.onPrepareGeneration}
       disabled={props.isGenerating}
-      className="w-full"
       size="3"
       color="ruby"
+      variant="solid"
       iconName={props.isGenerating ? 'refresh' : 'magic-wand'}
+      className="muse-gradient-action w-full rounded-xl"
     >
       {props.isGenerating ? (props.batchProgress || props.processingLabel) : getGenerateLabel(props)}
     </Button>
     {props.isGenerating && (
       <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--gray-4)]">
-        <div className="h-full bg-[var(--accent-9)] transition-all duration-300" style={{ width: `${props.progressValue}%` }}></div>
+        <div className="h-full bg-gradient-to-r from-rose-500 via-pink-500 to-teal-500 transition-all duration-300" style={{ width: `${props.progressValue}%` }}></div>
       </div>
     )}
     {props.error && <Text as="p" size="1" color="red" mt="2" align="center">{props.error}</Text>}

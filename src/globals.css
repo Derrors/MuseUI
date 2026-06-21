@@ -4,10 +4,36 @@
 
 :root {
   color-scheme: light;
+  --muse-app-bg: #f7f8f6;
+  --muse-surface: rgba(255, 255, 255, 0.86);
+  --muse-surface-strong: rgba(255, 255, 255, 0.96);
+  --muse-surface-muted: rgba(247, 248, 246, 0.82);
+  --muse-border: rgba(28, 32, 28, 0.1);
+  --muse-border-strong: rgba(28, 32, 28, 0.16);
+  --muse-shadow-soft: 0 16px 45px rgba(36, 42, 38, 0.08);
+  --muse-shadow-float: 0 24px 70px rgba(36, 42, 38, 0.16);
+  --muse-grid-dot: rgba(64, 72, 66, 0.18);
+  --muse-canvas-bg:
+    linear-gradient(135deg, rgba(244, 63, 94, 0.055), transparent 34%),
+    linear-gradient(225deg, rgba(14, 165, 233, 0.055), transparent 38%),
+    linear-gradient(180deg, #f8faf8 0%, #eef2ef 100%);
 }
 
 .dark {
   color-scheme: dark;
+  --muse-app-bg: #101210;
+  --muse-surface: rgba(25, 28, 25, 0.78);
+  --muse-surface-strong: rgba(21, 24, 21, 0.94);
+  --muse-surface-muted: rgba(32, 36, 33, 0.72);
+  --muse-border: rgba(232, 238, 230, 0.11);
+  --muse-border-strong: rgba(232, 238, 230, 0.18);
+  --muse-shadow-soft: 0 16px 45px rgba(0, 0, 0, 0.28);
+  --muse-shadow-float: 0 24px 70px rgba(0, 0, 0, 0.42);
+  --muse-grid-dot: rgba(217, 226, 218, 0.14);
+  --muse-canvas-bg:
+    linear-gradient(135deg, rgba(244, 63, 94, 0.08), transparent 36%),
+    linear-gradient(225deg, rgba(14, 165, 233, 0.08), transparent 40%),
+    linear-gradient(180deg, #151815 0%, #0d0f0e 100%);
 }
 
 .radix-themes {
@@ -23,7 +49,8 @@
 body {
   margin: 0;
   background:
-    radial-gradient(circle at top left, rgba(244, 63, 94, 0.08), transparent 34rem),
+    linear-gradient(135deg, rgba(244, 63, 94, 0.06), transparent 38%),
+    linear-gradient(225deg, rgba(20, 184, 166, 0.05), transparent 42%),
     var(--gray-1);
 }
 
@@ -49,6 +76,105 @@ body {
   font-family: 'Inter', sans-serif;
 }
 
+.muse-app-shell {
+  background:
+    linear-gradient(135deg, rgba(244, 63, 94, 0.06), transparent 36%),
+    linear-gradient(225deg, rgba(20, 184, 166, 0.055), transparent 38%),
+    var(--muse-app-bg);
+}
+
+.muse-topbar {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.62)),
+    var(--muse-surface-strong);
+  border-color: var(--muse-border);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.65) inset, var(--muse-shadow-soft);
+  backdrop-filter: blur(18px) saturate(150%);
+}
+
+.dark .muse-topbar {
+  background:
+    linear-gradient(180deg, rgba(32, 36, 33, 0.82), rgba(19, 22, 20, 0.76)),
+    var(--muse-surface-strong);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset, var(--muse-shadow-soft);
+}
+
+.muse-panel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.74)),
+    var(--muse-surface);
+  border: 1px solid var(--muse-border);
+  box-shadow: var(--muse-shadow-soft);
+}
+
+.dark .muse-panel {
+  background:
+    linear-gradient(180deg, rgba(32, 36, 33, 0.84), rgba(18, 21, 19, 0.78)),
+    var(--muse-surface);
+}
+
+.muse-panel-quiet {
+  background: var(--muse-surface-muted);
+  border: 1px solid var(--muse-border);
+}
+
+.muse-brand-mark {
+  background:
+    linear-gradient(135deg, rgba(244, 63, 94, 0.92), rgba(236, 72, 153, 0.72) 48%, rgba(20, 184, 166, 0.88));
+  box-shadow: 0 10px 24px rgba(244, 63, 94, 0.2);
+}
+
+.muse-gradient-action {
+  background: linear-gradient(135deg, #f43f5e 0%, #ec4899 48%, #14b8a6 100%) !important;
+  color: white !important;
+  box-shadow: 0 14px 30px rgba(244, 63, 94, 0.24);
+}
+
+.muse-gradient-action:hover {
+  filter: brightness(1.04) saturate(1.04);
+  box-shadow: 0 18px 38px rgba(244, 63, 94, 0.3);
+}
+
+.muse-canvas-surface {
+  background: var(--muse-canvas-bg);
+}
+
+.muse-floating-toolbar {
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid var(--muse-border);
+  box-shadow: var(--muse-shadow-float);
+  backdrop-filter: blur(18px) saturate(160%);
+}
+
+.dark .muse-floating-toolbar {
+  background: rgba(24, 28, 25, 0.84);
+}
+
+.muse-card-hover {
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.muse-card-hover:hover {
+  transform: translateY(-2px);
+  border-color: var(--muse-border-strong);
+  box-shadow: var(--muse-shadow-float);
+}
+
+.muse-empty-state {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.68)),
+    var(--muse-surface);
+  border: 1px solid var(--muse-border);
+  box-shadow: var(--muse-shadow-soft);
+  backdrop-filter: blur(16px) saturate(145%);
+}
+
+.dark .muse-empty-state {
+  background:
+    linear-gradient(180deg, rgba(31, 35, 32, 0.86), rgba(18, 21, 19, 0.72)),
+    var(--muse-surface);
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -59,18 +185,18 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #a8a29e; /* Stone 400 */
+  background: rgba(98, 110, 102, 0.44);
   border-radius: 4px;
 }
 
 .dark ::-webkit-scrollbar-track {
-  background: #292524; /* Stone 800 */
+  background: transparent;
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: #57534e; /* Stone 600 */
+  background: rgba(177, 190, 181, 0.28);
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #78716c; /* Stone 500 */
+  background: rgba(177, 190, 181, 0.42);
 }

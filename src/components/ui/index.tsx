@@ -132,9 +132,9 @@ export const DialogShell: React.FC<DialogShellProps> = ({
   closeLabel = 'Close',
 }) => (
   <Dialog.Root open={open} onOpenChange={onOpenChange}>
-    <Dialog.Content className={`mx-auto my-0 box-border !w-[calc(100vw-16px)] !max-w-[calc(100vw-16px)] sm:!w-[min(100vw-32px,100%)] ${dialogSizeClass[size]} max-h-[calc(100dvh-16px)] overflow-hidden p-0`}>
+    <Dialog.Content className={`muse-panel mx-auto my-0 box-border !w-[calc(100vw-16px)] !max-w-[calc(100vw-16px)] sm:!w-[min(100vw-32px,100%)] ${dialogSizeClass[size]} max-h-[calc(100dvh-16px)] overflow-hidden rounded-3xl p-0`}>
       <Flex direction="column" className="max-h-[calc(100dvh-16px)]">
-        <Flex align="start" justify="between" gap="4" className="border-b border-[var(--gray-5)] px-5 py-4">
+        <Flex align="start" justify="between" gap="4" className="border-b border-[var(--muse-border)] bg-[var(--muse-surface-muted)] px-5 py-4">
           <Box className="min-w-0">
             <Dialog.Title>{title}</Dialog.Title>
             {description && (
@@ -149,7 +149,7 @@ export const DialogShell: React.FC<DialogShellProps> = ({
           {children}
         </Box>
         {footer && (
-          <Flex justify="end" gap="3" className="border-t border-[var(--gray-5)] px-5 py-4">
+          <Flex justify="end" gap="3" className="border-t border-[var(--muse-border)] bg-[var(--muse-surface-muted)] px-5 py-4">
             {footer}
           </Flex>
         )}

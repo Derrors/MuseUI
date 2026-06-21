@@ -94,19 +94,24 @@ const AppHeader: React.FC<Props> = ({
 
   return (
     <>
-      <header className="relative z-20 flex h-14 shrink-0 items-center justify-between border-b border-[var(--gray-5)] bg-[var(--color-panel-solid)] px-3 shadow-sm md:px-4">
+      <header className="muse-topbar relative z-20 flex h-16 shrink-0 items-center justify-between border-b px-3 md:px-4">
         <Flex align="center" gap="3" className="min-w-0">
-          <a href="/" className="flex shrink-0 items-center gap-2 rounded-md outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-[var(--accent-8)]">
-            <img src="/logo.png" alt="MuseUI" className="h-8 w-8 rounded-md object-cover shadow-sm" />
-            <Text size="4" weight="bold" className="hidden text-[var(--gray-12)] sm:block">MuseUI</Text>
+          <a href="/" className="flex shrink-0 items-center gap-2 rounded-xl outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[var(--accent-8)]">
+            <span className="muse-brand-mark flex h-10 w-10 items-center justify-center rounded-xl p-[2px]">
+              <img src="/logo.png" alt="MuseUI" className="h-full w-full rounded-[10px] object-cover bg-white" />
+            </span>
+            <span className="hidden leading-tight sm:block">
+              <Text size="4" weight="bold" className="block text-[var(--gray-12)]">MuseUI</Text>
+              <Text size="1" color="gray" className="block -mt-0.5">{isZh ? '创作工作台' : 'Creative Studio'}</Text>
+            </span>
           </a>
-          <Separator orientation="vertical" className="hidden h-6 md:block" />
+          <Separator orientation="vertical" className="hidden h-7 md:block" />
           <Button
             variant="soft"
             color="gray"
             size="2"
             onClick={onOpenProjectManager}
-            className="hidden md:inline-flex"
+            className="hidden md:inline-flex rounded-full"
             iconName="grid"
           >
             {isZh ? '项目' : 'Projects'}
@@ -115,7 +120,7 @@ const AppHeader: React.FC<Props> = ({
 
         <Flex align="center" gap="2" className="min-w-0">
           {currentProject && (
-            <Flex align="center" gap="2" className="min-w-0 rounded-lg border border-[var(--accent-5)] bg-[var(--accent-2)] px-2 py-1">
+            <Flex align="center" gap="2" className="muse-panel-quiet min-w-0 rounded-full px-2.5 py-1.5">
               {isEditingName ? (
                 <input
                   ref={nameInputRef}
@@ -156,7 +161,7 @@ const AppHeader: React.FC<Props> = ({
             variant={hasKey ? 'soft' : 'solid'}
             color={hasKey ? 'gray' : 'amber'}
             iconName="settings"
-            className="relative"
+            className={`relative rounded-full ${hasKey ? '' : 'muse-gradient-action'}`}
             aria-label={isZh ? '打开 API 设置' : 'Open API settings'}
           >
             <span>API</span>
@@ -164,12 +169,12 @@ const AppHeader: React.FC<Props> = ({
           </Button>
 
           <Flex align="center" gap="2" className="hidden md:flex">
-            <Button variant="soft" color="gray" size="2" onClick={onOpenGallery} iconName="image">
+            <Button variant="soft" color="gray" size="2" onClick={onOpenGallery} iconName="image" className="rounded-full">
               {t.gallery}
             </Button>
-            <Flex align="center" className="rounded-md bg-[var(--gray-3)] p-0.5">
-              <button onClick={() => setLang('en')} className={`rounded px-2 py-1 text-xs ${lang === 'en' ? 'bg-[var(--color-panel-solid)] text-[var(--gray-12)] shadow-sm' : 'text-[var(--gray-10)]'}`}>EN</button>
-              <button onClick={() => setLang('zh')} className={`rounded px-2 py-1 text-xs ${lang === 'zh' ? 'bg-[var(--color-panel-solid)] text-[var(--gray-12)] shadow-sm' : 'text-[var(--gray-10)]'}`}>中文</button>
+            <Flex align="center" className="muse-panel-quiet rounded-full p-0.5">
+              <button onClick={() => setLang('en')} className={`rounded-full px-2.5 py-1 text-xs transition-colors ${lang === 'en' ? 'bg-[var(--color-panel-solid)] text-[var(--gray-12)] shadow-sm' : 'text-[var(--gray-10)] hover:text-[var(--gray-12)]'}`}>EN</button>
+              <button onClick={() => setLang('zh')} className={`rounded-full px-2.5 py-1 text-xs transition-colors ${lang === 'zh' ? 'bg-[var(--color-panel-solid)] text-[var(--gray-12)] shadow-sm' : 'text-[var(--gray-10)] hover:text-[var(--gray-12)]'}`}>中文</button>
             </Flex>
             <IconButton
               iconName={theme === 'dark' ? 'sun' : 'moon'}
@@ -178,7 +183,7 @@ const AppHeader: React.FC<Props> = ({
               color="gray"
               onClick={toggleTheme}
             />
-            <Button size="2" variant={devMode ? 'solid' : 'soft'} color={devMode ? 'ruby' : 'gray'} onClick={toggleDevMode}>
+            <Button size="2" variant={devMode ? 'solid' : 'soft'} color={devMode ? 'ruby' : 'gray'} onClick={toggleDevMode} className="rounded-full">
               DEV
             </Button>
             <a
@@ -186,7 +191,7 @@ const AppHeader: React.FC<Props> = ({
               target="_blank"
               rel="noreferrer"
               aria-label={isZh ? '打开 MuseUI GitHub 仓库' : 'Open MuseUI on GitHub'}
-              className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--gray-10)] transition-colors hover:bg-[var(--gray-3)] hover:text-[var(--gray-12)]"
+              className="muse-panel-quiet flex h-8 w-8 items-center justify-center rounded-full text-[var(--gray-10)] transition-colors hover:text-[var(--gray-12)]"
             >
               <IconLoader name="code" size={18} />
             </a>

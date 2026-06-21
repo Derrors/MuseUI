@@ -116,7 +116,7 @@ const MainApp: React.FC<Props> = ({ projectId }) => {
 
     return (
         <ThemeProvider appearance={state.theme}>
-        <div className={`w-full h-[100dvh] flex flex-col overflow-hidden ${state.theme} bg-[var(--gray-1)] text-[var(--gray-12)]`}>
+        <div className={`muse-app-shell w-full h-[100dvh] flex flex-col overflow-hidden ${state.theme} text-[var(--gray-12)]`}>
             <AppHeader
                 lang={state.lang}
                 setLang={actions.setLang}
@@ -135,7 +135,7 @@ const MainApp: React.FC<Props> = ({ projectId }) => {
                 onOpenProjectManager={() => actions.setIsProjectManagerOpen(true)}
             />
 
-            <div className="flex-1 flex overflow-hidden min-h-0 pb-16 md:pb-0">
+            <div className="flex-1 flex overflow-hidden min-h-0 pb-16 md:gap-3 md:p-3 md:pb-3">
                 <div className={`${activeMobilePane === 'config' ? 'flex' : 'hidden'} md:flex w-full md:w-auto min-w-0`}>
                     <AppSidebar
                     // Role
@@ -202,7 +202,7 @@ const MainApp: React.FC<Props> = ({ projectId }) => {
                 </div>
 
                 {/* Main Canvas Area */}
-                <div id="main-canvas-area" className={`${activeMobilePane === 'canvas' ? 'flex' : 'hidden'} md:flex flex-1 w-full bg-stone-50 dark:bg-stone-950 relative flex-col min-w-0`}>
+                <div id="main-canvas-area" className={`${activeMobilePane === 'canvas' ? 'flex' : 'hidden'} md:flex flex-1 w-full relative flex-col min-w-0 overflow-hidden border border-[var(--muse-border)] bg-[var(--muse-surface)] shadow-[var(--muse-shadow-soft)] md:rounded-[20px]`}>
                     <CanvasBoard
                         artboards={state.artboards} groups={state.artboardGroups}
                         onSelectArtboard={(id) => actions.handleOpenRegen(id)}

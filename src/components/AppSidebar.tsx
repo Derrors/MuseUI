@@ -243,8 +243,8 @@ const AppSidebar: React.FC<Props> = (props) => {
     // Helper for single image slot
     const ImageSlot = ({ label, file, onRemove, onClick, placeholderIcon = "plus", customContent }: any) => (
         <div className="flex flex-col gap-1">
-            <span className="text-[10px] font-bold text-stone-500 uppercase">{label}</span>
-            <div className="relative group w-full h-24 border border-dashed border-stone-300 dark:border-stone-700 rounded-lg overflow-hidden bg-stone-50 dark:bg-stone-900 hover:border-teal-500 transition-colors">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--gray-10)]">{label}</span>
+            <div className="group relative h-24 w-full overflow-hidden rounded-xl border border-dashed border-[var(--muse-border-strong)] bg-[var(--muse-surface-muted)] transition-colors hover:border-[var(--accent-8)]">
                 {customContent ? customContent : (
                     file ? (
                         <>
@@ -261,7 +261,7 @@ const AppSidebar: React.FC<Props> = (props) => {
                             </button>
                         </>
                     ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center text-stone-400 gap-1 cursor-pointer hover:text-teal-500 transition-colors" onClick={onClick}>
+                        <div className="flex h-full w-full cursor-pointer flex-col items-center justify-center gap-1 text-[var(--gray-10)] transition-colors hover:text-[var(--accent-11)]" onClick={onClick}>
                             <IconLoader name={placeholderIcon} size={24} />
                             <span className="text-[9px]">{props.lang === 'zh' ? '上传' : 'Upload'}</span>
                         </div>
@@ -322,29 +322,29 @@ const AppSidebar: React.FC<Props> = (props) => {
         const isOpen = expandedSections[id];
         const label = sectionLabels[id];
         return (
-            <section className="rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 overflow-hidden shadow-sm">
+            <section className="muse-panel overflow-hidden rounded-2xl">
                 <button
                     type="button"
                     onClick={() => toggleSection(id)}
-                    className="w-full flex items-center justify-between gap-3 px-3 py-3 text-left hover:bg-stone-50 dark:hover:bg-stone-800/70 transition-colors"
+                    className="flex w-full items-center justify-between gap-3 px-3.5 py-3 text-left transition-colors hover:bg-[var(--gray-3)]/70"
                     aria-expanded={isOpen}
                 >
                     <span className="min-w-0">
-                        <span className="block text-sm font-bold text-stone-800 dark:text-stone-100">
+                        <span className="block text-sm font-bold text-[var(--gray-12)]">
                             {props.lang === 'zh' ? label.zh : label.en}
                         </span>
-                        <span className="block mt-0.5 text-[10px] text-stone-400 dark:text-stone-500 truncate">
+                        <span className="mt-0.5 block truncate text-[10px] text-[var(--gray-10)]">
                             {props.lang === 'zh' ? label.hintZh : label.hintEn}
                         </span>
                     </span>
                     <IconLoader
                         name="chevron-down"
                         size={14}
-                        className={`text-stone-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                        className={`text-[var(--gray-10)] transition-transform ${isOpen ? 'rotate-180' : ''}`}
                     />
                 </button>
                 {isOpen && (
-                    <div className="px-3 pb-4 pt-1 space-y-5 border-t border-stone-100 dark:border-stone-800">
+                    <div className="space-y-5 border-t border-[var(--muse-border)] px-3.5 pb-4 pt-3">
                         {children}
                     </div>
                 )}
@@ -353,33 +353,33 @@ const AppSidebar: React.FC<Props> = (props) => {
     };
 
     return (
-        <div className="w-full md:w-[360px] bg-white dark:bg-stone-900 border-r border-stone-200 dark:border-stone-800 flex flex-col shrink-0 min-w-0">
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
+        <div className="muse-panel flex w-full shrink-0 flex-col min-w-0 border-r md:w-[370px] md:rounded-[20px]">
+            <div className="custom-scrollbar flex-1 space-y-5 overflow-y-auto p-3 md:p-4">
                 {/* Role Switcher Dropdown */}
                 <div className="flex items-center gap-2">
                     <div className="relative flex-1" ref={roleDropdownRef}>
                         <button
                             onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
-                            className="w-full flex items-center gap-2.5 px-3 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl shadow-sm hover:shadow-md hover:border-stone-300 dark:hover:border-stone-600 transition-all group"
+                            className="muse-panel-quiet group flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 transition-all hover:border-[var(--muse-border-strong)] hover:shadow-[var(--muse-shadow-soft)]"
                         >
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white shadow-sm shrink-0">
+                            <div className="muse-brand-mark flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white">
                                 {activeRoleDef && (
                                     <RoleIcon roleId={activeRoleDef.id} className="w-4 h-4" />
                                 )}
                             </div>
                             <div className="flex-1 text-left">
-                                <div className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wide leading-tight">
+                                <div className="text-[10px] font-bold uppercase tracking-wide leading-tight text-[var(--gray-10)]">
                                     {props.lang === 'zh' ? '当前模式' : 'Current Mode'}
                                 </div>
-                                <div className="text-sm font-semibold text-stone-800 dark:text-stone-100 leading-tight">
+                                <div className="text-sm font-semibold leading-tight text-[var(--gray-12)]">
                                     {props.lang === 'zh' ? activeRoleDef?.label_zh : activeRoleDef?.label}
                                 </div>
                             </div>
-                            <IconLoader name="chevron-down" size={14} className={`text-stone-400 group-hover:text-stone-600 dark:group-hover:text-stone-300 transition-colors ${isRoleDropdownOpen ? 'rotate-180' : ''}`} />
+                            <IconLoader name="chevron-down" size={14} className={`text-[var(--gray-10)] transition-colors group-hover:text-[var(--gray-12)] ${isRoleDropdownOpen ? 'rotate-180' : ''}`} />
                         </button>
 
                         {isRoleDropdownOpen && (
-                            <div className="absolute z-30 left-0 right-0 mt-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl shadow-xl overflow-hidden">
+                            <div className="muse-panel absolute left-0 right-0 z-30 mt-2 overflow-hidden rounded-2xl">
                             <div className="p-2 grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                                 {ROLES.map(role => {
                                     const isActive = role.id === props.activeRole;
@@ -406,7 +406,7 @@ const AppSidebar: React.FC<Props> = (props) => {
                     </div>
                     <button
                         onClick={props.onOpenProjectManager}
-                        className="p-2 text-stone-400 hover:text-teal-500 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg transition-colors shrink-0"
+                        className="muse-panel-quiet shrink-0 rounded-xl p-2 text-[var(--gray-10)] transition-colors hover:text-[var(--accent-11)]"
                         title={props.lang === 'zh' ? '项目管理' : 'Project Manager'}
                     >
                         <IconLoader name="grid" size={18} />
