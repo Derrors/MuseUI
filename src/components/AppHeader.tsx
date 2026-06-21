@@ -167,7 +167,7 @@ const AppHeader: React.FC<Props> = ({
 
         <div className="hidden md:flex items-center gap-2 shrink-0">
           {currentProject && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 rounded-lg border border-teal-200 dark:border-teal-800 mr-2">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 rounded-lg border border-teal-200 dark:border-teal-800">
               {isEditingName ? (
                 <input
                   ref={nameInputRef}
@@ -208,63 +208,68 @@ const AppHeader: React.FC<Props> = ({
             </div>
           )}
 
-          <div className="flex bg-stone-100 dark:bg-stone-800 rounded-lg p-1">
-            <button onClick={() => setLang('en')} className={`px-2 py-1 text-xs rounded ${lang === 'en' ? 'bg-white dark:bg-stone-700 shadow text-stone-800 dark:text-stone-100' : 'text-stone-500'}`}>EN</button>
-            <button onClick={() => setLang('zh')} className={`px-2 py-1 text-xs rounded ${lang === 'zh' ? 'bg-white dark:bg-stone-700 shadow text-stone-800 dark:text-stone-100' : 'text-stone-500'}`}>中文</button>
+          <div className="flex items-center gap-1 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/60 p-1">
+            <div className="flex bg-white dark:bg-stone-900 rounded-lg p-1 shadow-sm">
+              <button onClick={() => setLang('en')} className={`px-2 py-1 text-xs rounded ${lang === 'en' ? 'bg-stone-100 dark:bg-stone-700 shadow text-stone-800 dark:text-stone-100' : 'text-stone-500'}`}>EN</button>
+              <button onClick={() => setLang('zh')} className={`px-2 py-1 text-xs rounded ${lang === 'zh' ? 'bg-stone-100 dark:bg-stone-700 shadow text-stone-800 dark:text-stone-100' : 'text-stone-500'}`}>中文</button>
+            </div>
+
+            <button onClick={toggleTheme} className="p-2 text-stone-500 hover:bg-white dark:hover:bg-stone-700 rounded-lg">
+              {theme === 'dark' ? <IconLoader name="sun" size={20} /> : <IconLoader name="moon" size={20} />}
+            </button>
+            <button
+              onClick={onOpenGallery}
+              className="px-3 py-1.5 hover:bg-white dark:hover:bg-stone-700 rounded-lg text-xs font-bold text-stone-600 dark:text-stone-300 flex items-center gap-2"
+            >
+              <IconLoader name="image" size={16} /> <span>{t.gallery}</span>
+            </button>
           </div>
 
-          <button onClick={toggleTheme} className="p-2 text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg">
-            {theme === 'dark' ? <IconLoader name="sun" size={20} /> : <IconLoader name="moon" size={20} />}
-          </button>
-          <button
-            onClick={onOpenGallery}
-            className="px-3 py-1.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 rounded-lg text-xs font-bold text-stone-600 dark:text-stone-300 flex items-center gap-2"
-          >
-            <IconLoader name="image" size={16} /> <span>{t.gallery}</span>
-          </button>
-          <button onClick={toggleDevMode} className={`px-2 py-1 text-[10px] rounded border ${devMode ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-stone-100 text-stone-400 border-stone-200'}`}>
-            DEV
-          </button>
+          <div className="flex items-center gap-1 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/60 p-1">
+            <button onClick={toggleDevMode} className={`px-2 py-1 text-[10px] rounded border ${devMode ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-white dark:bg-stone-900 text-stone-400 border-stone-200 dark:border-stone-700'}`}>
+              DEV
+            </button>
 
-          {/* API Key Button */}
-          <button
-            onClick={() => setShowApiSettings(true)}
-            className={`relative px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${
-              hasKey
-                ? 'bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-600 dark:text-stone-300'
-                : 'bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700'
-            }`}
-          >
-            <IconLoader name="settings" size={14} />
-            {hasKey
-              ? (lang === 'zh' ? 'API' : 'API')
-              : (lang === 'zh' ? '未设置 Key' : 'Set API Key')
-            }
-            {!hasKey && (
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full animate-pulse" />
-            )}
-          </button>
-          <a
-            href="https://github.com/Derrors/MuseUI"
-            target="_blank"
-            rel="noreferrer"
-            aria-label={lang === 'zh' ? '打开 MuseUI GitHub 仓库' : 'Open MuseUI on GitHub'}
-            title={lang === 'zh' ? 'GitHub 仓库' : 'GitHub repository'}
-            className="p-2 text-stone-500 hover:text-stone-800 hover:bg-stone-100 dark:text-stone-400 dark:hover:text-stone-100 dark:hover:bg-stone-800 rounded-lg transition-colors"
-          >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-              className="shrink-0"
+            {/* API Key Button */}
+            <button
+              onClick={() => setShowApiSettings(true)}
+              className={`relative px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${
+                hasKey
+                  ? 'bg-white dark:bg-stone-900 hover:bg-stone-100 dark:hover:bg-stone-700 text-stone-600 dark:text-stone-300'
+                  : 'bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700'
+              }`}
             >
-              <path
-                fill="currentColor"
-                d="M12 2C6.477 2 2 6.484 2 12.021c0 4.428 2.865 8.184 6.839 9.504.5.092.682-.217.682-.483 0-.238-.009-.868-.014-1.704-2.782.605-3.369-1.343-3.369-1.343-.455-1.157-1.11-1.465-1.11-1.465-.908-.621.069-.609.069-.609 1.004.071 1.532 1.033 1.532 1.033.892 1.53 2.341 1.088 2.91.832.091-.647.35-1.088.636-1.339-2.221-.253-4.555-1.113-4.555-4.951 0-1.094.39-1.988 1.03-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.563 9.563 0 0 1 12 6.847c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.028 1.594 1.028 2.688 0 3.848-2.337 4.695-4.566 4.943.36.31.679.921.679 1.856 0 1.339-.012 2.42-.012 2.749 0 .268.18.579.688.481A10.025 10.025 0 0 0 22 12.021C22 6.484 17.523 2 12 2Z"
-              />
-            </svg>
-          </a>
+              <IconLoader name="settings" size={14} />
+              {hasKey
+                ? (lang === 'zh' ? 'API' : 'API')
+                : (lang === 'zh' ? '未设置 Key' : 'Set API Key')
+              }
+              {!hasKey && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full animate-pulse" />
+              )}
+            </button>
+            <a
+              href="https://github.com/Derrors/MuseUI"
+              target="_blank"
+              rel="noreferrer"
+              aria-label={lang === 'zh' ? '打开 MuseUI GitHub 仓库' : 'Open MuseUI on GitHub'}
+              title={lang === 'zh' ? 'GitHub 仓库' : 'GitHub repository'}
+              className="p-2 text-stone-500 hover:text-stone-800 hover:bg-white dark:text-stone-400 dark:hover:text-stone-100 dark:hover:bg-stone-700 rounded-lg transition-colors"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                className="shrink-0"
+              >
+                <path
+                  fill="currentColor"
+                  d="M12 2C6.477 2 2 6.484 2 12.021c0 4.428 2.865 8.184 6.839 9.504.5.092.682-.217.682-.483 0-.238-.009-.868-.014-1.704-2.782.605-3.369-1.343-3.369-1.343-.455-1.157-1.11-1.465-1.11-1.465-.908-.621.069-.609.069-.609 1.004.071 1.532 1.033 1.532 1.033.892 1.53 2.341 1.088 2.91.832.091-.647.35-1.088.636-1.339-2.221-.253-4.555-1.113-4.555-4.951 0-1.094.39-1.988 1.03-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.563 9.563 0 0 1 12 6.847c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.028 1.594 1.028 2.688 0 3.848-2.337 4.695-4.566 4.943.36.31.679.921.679 1.856 0 1.339-.012 2.42-.012 2.749 0 .268.18.579.688.481A10.025 10.025 0 0 0 22 12.021C22 6.484 17.523 2 12 2Z"
+                />
+              </svg>
+            </a>
+          </div>
         </div>
       </header>
 

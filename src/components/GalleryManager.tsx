@@ -18,11 +18,14 @@ import {
 } from '../domain/stickers';
 import type { StickerAssetItem } from '../types';
 
+type GalleryAddOptions = { closeGallery?: boolean };
+type StickerOperation = 'repair' | 'auto-split' | 'grid-split' | 'zip';
+
 interface Props {
     history: GeneratedImage[];
     onUpdateHistory: (newHistory: GeneratedImage[]) => void;
     onSelect: (image: GeneratedImage) => void;
-    onAddBatch: (images: GeneratedImage[]) => void;
+    onAddBatch: (images: GeneratedImage[], options?: GalleryAddOptions) => void;
     onClose: () => void; // Function to close the overlay
     lang: LangType;
     onAddNotification?: (msg: string, type: 'success' | 'error' | 'info') => void;
@@ -44,6 +47,8 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [zoomedImage, setZoomedImage] = useState<GeneratedImage | null>(null);
     const [processingStickerId, setProcessingStickerId] = useState<string | null>(null);
+    const [stickerOperation, setStickerOperation] = useState<StickerOperation | null>(null);
+    const [lastSplitResult, setLastSplitResult] = useState<{ imageId: string; itemIds: string[]; count: number; method: 'auto' | 'manual' } | null>(null);
     const [gridSplit, setGridSplit] = useState({ rows: 2, columns: 3 });
     const fileInputRef = useRef<HTMLInputElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -377,6 +382,7 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
     const handleRepairZoomedSticker = async () => {
         if (!zoomedImage || !isStickerImage(zoomedImage)) return;
         setProcessingStickerId(zoomedImage.id);
+        setStickerOperation('repair');
         try {
             const sticker = zoomedImage.details!.sticker!;
             const repaired = await repairStickerTransparency(zoomedImage.url, {
@@ -401,12 +407,14 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
             notify(err?.message || (lang === 'zh' ? '透明修复失败' : 'Transparency repair failed'), 'error');
         } finally {
             setProcessingStickerId(null);
+            setStickerOperation(null);
         }
     };
 
     const handleAutoSplitZoomedSticker = async () => {
         if (!zoomedImage || !isStickerImage(zoomedImage)) return;
         setProcessingStickerId(zoomedImage.id);
+        setStickerOperation('auto-split');
         try {
             const result = await splitStickerCollectionDetailed(zoomedImage.url);
             if (result.items.length === 0) {
@@ -414,32 +422,38 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
             }
             const updated = withStickerCollectionItems(zoomedImage, result.items, 'auto');
             await updateGalleryImage(updated);
+            setLastSplitResult({ imageId: updated.id, itemIds: result.items.map(item => item.id), count: result.items.length, method: 'auto' });
             notify(lang === 'zh' ? `已拆分 ${result.items.length} 个贴纸` : `Split ${result.items.length} stickers`, 'success');
         } catch (err: any) {
             notify(err?.message || (lang === 'zh' ? '自动拆分失败' : 'Auto split failed'), 'error');
         } finally {
             setProcessingStickerId(null);
+            setStickerOperation(null);
         }
     };
 
     const handleGridSplitZoomedSticker = async () => {
         if (!zoomedImage || !isStickerImage(zoomedImage)) return;
         setProcessingStickerId(zoomedImage.id);
+        setStickerOperation('grid-split');
         try {
             const result = await splitStickerCollectionByGridDetailed(zoomedImage.url, gridSplit.rows, gridSplit.columns);
             const updated = withStickerCollectionItems(zoomedImage, result.items, 'manual');
             await updateGalleryImage(updated);
+            setLastSplitResult({ imageId: updated.id, itemIds: result.items.map(item => item.id), count: result.items.length, method: 'manual' });
             notify(lang === 'zh' ? `已按网格拆分 ${result.items.length} 个贴纸` : `Grid split ${result.items.length} stickers`, 'success');
         } catch (err: any) {
             notify(err?.message || (lang === 'zh' ? '网格拆分失败' : 'Grid split failed'), 'error');
         } finally {
             setProcessingStickerId(null);
+            setStickerOperation(null);
         }
     };
 
     const handleStickerZipDownload = async () => {
         if (!zoomedImage || !isStickerImage(zoomedImage)) return;
         setProcessingStickerId(zoomedImage.id);
+        setStickerOperation('zip');
         try {
             const blob = await buildStickerZipBlob(zoomedImage);
             const link = document.createElement('a');
@@ -453,12 +467,13 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
             notify(err?.message || (lang === 'zh' ? 'ZIP 下载失败' : 'ZIP download failed'), 'error');
         } finally {
             setProcessingStickerId(null);
+            setStickerOperation(null);
         }
     };
 
     const handleAddStickerItem = (item: StickerAssetItem) => {
         if (!zoomedImage) return;
-        onAddBatch([stickerItemToGeneratedImage(zoomedImage, item)]);
+        onAddBatch([stickerItemToGeneratedImage(zoomedImage, item)], { closeGallery: false });
         notify(lang === 'zh' ? '子贴纸已加入画布' : 'Sticker item added to canvas', 'success');
     };
 
@@ -470,6 +485,10 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
         link.click();
         document.body.removeChild(link);
     };
+
+    const isStickerActionRunning = (operation: StickerOperation) => (
+        Boolean(zoomedImage && processingStickerId === zoomedImage.id && stickerOperation === operation)
+    );
 
     return (
         <div className="fixed inset-0 z-50 bg-stone-100/95 dark:bg-stone-950/95 backdrop-blur-md flex flex-col animate-in fade-in duration-300">
@@ -692,6 +711,22 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
                         <p>{lang === 'zh' ? '没有找到图片' : 'No images found'}</p>
                     </div>
                 )}
+
+                {isLoadingMore && (
+                    <div className="flex justify-center items-center py-8">
+                        <svg className="animate-spin h-8 w-8 text-teal-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span className="ml-3 text-stone-500">{lang === 'zh' ? '加载更多...' : 'Loading more...'}</span>
+                    </div>
+                )}
+
+                {!isLoadingHistory && !hasMore && displayImages.length > 0 && (
+                    <div className="text-center py-8 text-stone-400 text-sm">
+                        {lang === 'zh' ? '已加载全部内容' : 'All content loaded'}
+                    </div>
+                )}
             </div>
 
             {/* Bottom Action Bar (Select Mode) */}
@@ -850,16 +885,18 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
                                             <button
                                                 onClick={handleRepairZoomedSticker}
                                                 disabled={processingStickerId === zoomedImage.id}
-                                                className="px-3 py-2 rounded-lg text-xs font-bold bg-sky-500/15 text-sky-200 hover:bg-sky-500/25 disabled:opacity-50"
+                                                className="px-3 py-2 rounded-lg text-xs font-bold bg-sky-500/15 text-sky-200 hover:bg-sky-500/25 disabled:opacity-50 flex items-center justify-center gap-1.5"
                                             >
-                                                {lang === 'zh' ? '修复透明' : 'Repair Alpha'}
+                                                {isStickerActionRunning('repair') && <span className="h-3 w-3 animate-spin rounded-full border border-current border-t-transparent" />}
+                                                {isStickerActionRunning('repair') ? (lang === 'zh' ? '修复中' : 'Repairing') : (lang === 'zh' ? '修复透明' : 'Repair Alpha')}
                                             </button>
                                             <button
                                                 onClick={handleAutoSplitZoomedSticker}
                                                 disabled={processingStickerId === zoomedImage.id}
-                                                className="px-3 py-2 rounded-lg text-xs font-bold bg-teal-500/15 text-teal-200 hover:bg-teal-500/25 disabled:opacity-50"
+                                                className="px-3 py-2 rounded-lg text-xs font-bold bg-teal-500/15 text-teal-200 hover:bg-teal-500/25 disabled:opacity-50 flex items-center justify-center gap-1.5"
                                             >
-                                                {lang === 'zh' ? '自动拆分' : 'Auto Split'}
+                                                {isStickerActionRunning('auto-split') && <span className="h-3 w-3 animate-spin rounded-full border border-current border-t-transparent" />}
+                                                {isStickerActionRunning('auto-split') ? (lang === 'zh' ? '拆分中' : 'Splitting') : (lang === 'zh' ? '自动拆分' : 'Auto Split')}
                                             </button>
                                         </div>
 
@@ -885,9 +922,10 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
                                             <button
                                                 onClick={handleGridSplitZoomedSticker}
                                                 disabled={processingStickerId === zoomedImage.id}
-                                                className="px-3 py-2 rounded-lg text-xs font-bold bg-stone-800 text-stone-200 hover:bg-stone-700 disabled:opacity-50"
+                                                className="px-3 py-2 rounded-lg text-xs font-bold bg-stone-800 text-stone-200 hover:bg-stone-700 disabled:opacity-50 flex items-center justify-center gap-1.5"
                                             >
-                                                {lang === 'zh' ? '网格' : 'Grid'}
+                                                {isStickerActionRunning('grid-split') && <span className="h-3 w-3 animate-spin rounded-full border border-current border-t-transparent" />}
+                                                {isStickerActionRunning('grid-split') ? (lang === 'zh' ? '拆分中' : 'Splitting') : (lang === 'zh' ? '网格' : 'Grid')}
                                             </button>
                                         </div>
 
@@ -900,14 +938,29 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
                                                     <button
                                                         onClick={handleStickerZipDownload}
                                                         disabled={processingStickerId === zoomedImage.id}
-                                                        className="text-[11px] font-bold text-teal-300 hover:text-teal-200 disabled:opacity-50"
+                                                        className="text-[11px] font-bold text-teal-300 hover:text-teal-200 disabled:opacity-50 flex items-center gap-1.5"
                                                     >
-                                                        ZIP
+                                                        {isStickerActionRunning('zip') && <span className="h-3 w-3 animate-spin rounded-full border border-current border-t-transparent" />}
+                                                        {isStickerActionRunning('zip') ? (lang === 'zh' ? '打包中' : 'Zipping') : 'ZIP'}
                                                     </button>
                                                 </div>
+                                                {lastSplitResult?.imageId === zoomedImage.id && (
+                                                    <div className="rounded-lg border border-teal-500/30 bg-teal-500/10 px-2 py-1 text-[11px] font-bold text-teal-200">
+                                                        {lang === 'zh'
+                                                            ? `刚新增 ${lastSplitResult.count} 个子贴纸`
+                                                            : `${lastSplitResult.count} new items added`}
+                                                    </div>
+                                                )}
                                                 <div className="grid grid-cols-2 gap-2 max-h-52 overflow-y-auto pr-1">
                                                     {zoomedImage.details?.sticker?.collectionItems?.map((item) => (
-                                                        <div key={item.id} className="rounded-lg border border-stone-800 bg-stone-900 overflow-hidden">
+                                                        <div
+                                                            key={item.id}
+                                                            className={`rounded-lg border bg-stone-900 overflow-hidden transition-all ${
+                                                                lastSplitResult?.imageId === zoomedImage.id && lastSplitResult.itemIds.includes(item.id)
+                                                                    ? 'border-teal-400 ring-2 ring-teal-400/30'
+                                                                    : 'border-stone-800'
+                                                            }`}
+                                                        >
                                                             <img src={item.url} alt="" className="w-full aspect-square object-contain bg-black/30" />
                                                             <div className="grid grid-cols-2 gap-1 p-1">
                                                                 <button
@@ -958,23 +1011,6 @@ const GalleryManager: React.FC<Props> = ({ history, onUpdateHistory, onSelect, o
                         </div>
                     </div>
 
-                    {/* Loading more indicator */}
-                    {isLoadingMore && (
-                        <div className="flex justify-center items-center py-8">
-                            <svg className="animate-spin h-8 w-8 text-teal-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            <span className="ml-3 text-stone-500">{lang === 'zh' ? '加载更多...' : 'Loading more...'}</span>
-                        </div>
-                    )}
-
-                    {/* End of list indicator */}
-                    {!hasMore && displayImages.length > 0 && (
-                        <div className="text-center py-8 text-stone-400 text-sm">
-                            {lang === 'zh' ? '已加载全部内容' : 'All content loaded'}
-                        </div>
-                    )}
                 </div>
             )}
         </div>

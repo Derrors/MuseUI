@@ -10,6 +10,8 @@ interface Props {
   preferredImageApiId: string | null;
   setPromptLanguage: (language: string | null) => void;
   setPreferredImageApiId: (id: string | null) => void;
+  modeSummary: string;
+  outputSummary: string;
   onPrepareGeneration: () => void;
   isGenerating: boolean;
   batchProgress: string;
@@ -43,8 +45,27 @@ const getGenerateLabel = (props: Props) => {
   return props.lang === 'zh' ? '生成游戏资产' : 'Generate Game Asset';
 };
 
-const GenerationFooter: React.FC<Props> = (props) => (
+const GenerationFooter: React.FC<Props> = (props) => {
+  const enabledImageApis = getEnabledImageAPIs();
+  const selectedImageApi = enabledImageApis.find(api => api.id === props.preferredImageApiId) || enabledImageApis[0];
+  const imageApiLabel = selectedImageApi
+    ? (selectedImageApi.name || selectedImageApi.imageModel || selectedImageApi.id)
+    : (props.lang === 'zh' ? '未配置图片 API' : 'No image API');
+
+  return (
   <div className="p-4 border-t border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 z-20">
+    <div className="mb-3 rounded-lg border border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950/60 px-3 py-2">
+      <div className="flex items-center justify-between gap-3 text-[10px] uppercase tracking-wide text-stone-400 dark:text-stone-500">
+        <span>{props.lang === 'zh' ? '当前任务' : 'Current task'}</span>
+        <span className="truncate">{imageApiLabel}</span>
+      </div>
+      <div className="mt-1 flex items-center gap-2 text-xs font-bold text-stone-700 dark:text-stone-200">
+        <span className="truncate">{props.modeSummary}</span>
+        <span className="h-1 w-1 rounded-full bg-stone-300 dark:bg-stone-700 shrink-0" />
+        <span className="truncate text-stone-500 dark:text-stone-400">{props.outputSummary}</span>
+      </div>
+    </div>
+
     <div className="flex gap-2 mb-3">
       <select
         value={props.promptLanguage || ''}
@@ -66,7 +87,7 @@ const GenerationFooter: React.FC<Props> = (props) => (
         className="flex-1 text-xs bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded px-2 py-1.5 text-stone-600 dark:text-stone-300"
       >
         <option value="">{props.lang === 'zh' ? '默认模型' : 'Default Model'}</option>
-        {getEnabledImageAPIs().map(api => (
+        {enabledImageApis.map(api => (
           <option key={api.id} value={api.id}>{api.name || api.imageModel || api.id}</option>
         ))}
       </select>
@@ -99,6 +120,7 @@ const GenerationFooter: React.FC<Props> = (props) => (
     )}
     {props.error && <p className="text-xs text-red-500 mt-2 text-center">{props.error}</p>}
   </div>
-);
+  );
+};
 
 export default GenerationFooter;

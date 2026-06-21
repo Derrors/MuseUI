@@ -222,6 +222,13 @@ const MainApp: React.FC<Props> = ({ projectId }) => {
                         position={state.position}
                         setPosition={actions.setPosition}
                     />
+                    <button
+                        type="button"
+                        onClick={() => setActiveMobilePane('config')}
+                        className="md:hidden absolute left-1/2 bottom-4 z-30 -translate-x-1/2 rounded-full border border-teal-200 bg-white/95 px-4 py-2 text-xs font-bold text-teal-700 shadow-lg shadow-stone-900/10 backdrop-blur hover:bg-teal-50 dark:border-teal-800 dark:bg-stone-900/95 dark:text-teal-300 dark:hover:bg-stone-800"
+                    >
+                        {state.lang === 'zh' ? '继续编辑' : 'Continue editing'}
+                    </button>
                 </div>
             </div>
 
@@ -229,7 +236,7 @@ const MainApp: React.FC<Props> = ({ projectId }) => {
                 activePane={activeMobilePane}
                 onChange={setActiveMobilePane}
                 lang={state.lang}
-                hasArtboards={state.artboards.length > 0}
+                artboardCount={state.artboards.length}
             />
 
             {/* OVERLAYS */}
@@ -249,7 +256,7 @@ const MainApp: React.FC<Props> = ({ projectId }) => {
             {state.isGalleryOpen && (
                 <GalleryManager
                     history={state.history} onUpdateHistory={actions.setHistory} onSelect={() => { }}
-                    onAddBatch={(imgs) => {
+                    onAddBatch={(imgs, options) => {
                         const newBoards = imgs.map((img, i) => {
                             // Check if image details has resolution info to prevent whitespace
                             let w = 1000, h = 1000;
@@ -275,7 +282,9 @@ const MainApp: React.FC<Props> = ({ projectId }) => {
                             };
                         });
                         actions.setArtboards(prev => [...prev, ...newBoards]);
-                        actions.setIsGalleryOpen(false);
+                        if (options?.closeGallery !== false) {
+                            actions.setIsGalleryOpen(false);
+                        }
                     }}
                     onClose={() => actions.setIsGalleryOpen(false)}
                     lang={state.lang}
@@ -384,20 +393,21 @@ const MainApp: React.FC<Props> = ({ projectId }) => {
                             </div>
                             <div>
                                 <h2 id="first-use-tips-title" className="text-base font-bold text-stone-900 dark:text-white">
-                                    {state.lang === 'zh' ? '使用小贴士' : 'Quick Tips'}
+                                    {state.lang === 'zh' ? '开始使用' : 'Getting Started'}
                                 </h2>
                                 <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 leading-relaxed">
                                     {state.lang === 'zh'
-                                        ? '开始生成前，先确认下面这几件事。'
-                                        : 'Before generating, please note these basics.'}
+                                        ? '按这三步走，第一次生成会更顺。'
+                                        : 'Follow these three steps for a smoother first run.'}
                                 </p>
                             </div>
                         </div>
 
                         <div className="space-y-3">
                             {[
-                                state.lang === 'zh' ? '本工具完全免费。' : 'This tool is completely free.',
-                                state.lang === 'zh' ? '需要在右上角配置生图 API 之后，才能够正常使用。' : 'You need to configure an image-generation API in the top-right corner before normal use.',
+                                state.lang === 'zh' ? '配置 API：打开右上角 API，填入 Key、Base URL 和模型。' : 'Configure API: open API settings, then enter the key, Base URL, and models.',
+                                state.lang === 'zh' ? '填写提示词：在配置页写清楚主题、场景和想要的风格。' : 'Write the prompt: describe the subject, scenario, and desired style.',
+                                state.lang === 'zh' ? '生成并检查画布：生成后会自动切到画布，可点“继续编辑”返回配置。' : 'Generate and check canvas: after generation, review the canvas and tap Continue editing when needed.',
                             ].map((tip, index) => (
                                 <div key={tip} className="flex items-start gap-3 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/60 p-3">
                                     <span className="w-5 h-5 rounded-full bg-teal-500 text-white text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">

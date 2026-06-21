@@ -29,8 +29,8 @@ const officialApiGuides = [
     id: 'openai',
     title: { zh: 'OpenAI 兼容 API', en: 'OpenAI-Compatible API' },
     description: {
-      zh: 'Base URL 按服务根地址填写，代码会自动拼接 chat/completions、images/generations 和 models。',
-      en: 'Enter the service root. The app appends chat/completions, images/generations, and models automatically.',
+      zh: 'Base URL 按服务根地址填写，代码会自动拼接 chat/completions、images/generations、images/edits 和 models。',
+      en: 'Enter the service root. The app appends chat/completions, images/generations, images/edits, and models automatically.',
     },
     docsUrl: 'https://platform.openai.com/docs/api-reference',
     keyUrl: 'https://platform.openai.com/api-keys',
@@ -38,6 +38,7 @@ const officialApiGuides = [
       { label: { zh: '服务根地址', en: 'Service root' }, value: 'https://api.openai.com/v1' },
       { label: { zh: '文本请求', en: 'Text request' }, value: '/chat/completions' },
       { label: { zh: '图片请求', en: 'Image request' }, value: '/images/generations' },
+      { label: { zh: '参考图编辑', en: 'Image edits' }, value: '/images/edits' },
       { label: { zh: '模型列表', en: 'Models list' }, value: '/models' },
     ],
     steps: {
@@ -66,7 +67,9 @@ const PINNED_IMAGE_MODELS = [
   'gpt-image-2',
 ];
 
-export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Props) {
+type SaveStatus = 'idle' | 'dirty' | 'saved';
+
+export default function ApiKeyConfig({ onClose, lang = 'zh' }: Props) {
   const isZh = lang === 'zh';
   const [profiles, setProfiles] = useState<APIConfig[]>([]);
   const [testingId, setTestingId] = useState<string | null>(null);
@@ -81,6 +84,7 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
   const [fetchedModels, setFetchedModels] = useState<Record<string, string[]>>({});
   const [fetchingModelsId, setFetchingModelsId] = useState<string | null>(null);
   const [fetchErrors, setFetchErrors] = useState<Record<string, string>>({});
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const fetchedSignaturesRef = useRef<Record<string, string>>({});
 
   useEffect(() => {
@@ -88,10 +92,16 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
     setProfiles(settings.profiles.length > 0
       ? settings.profiles.map(normalizeAPIProfileForUI)
       : [createDefaultAPIProfile()]);
+    setSaveStatus('idle');
   }, []);
+
+  const markDirty = () => {
+    setSaveStatus('dirty');
+  };
 
   const persist = () => {
     saveAPISettings({ profiles });
+    setSaveStatus('saved');
   };
 
   const resetFetchedModels = (id: string) => {
@@ -110,11 +120,13 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
 
   const handleAdd = () => {
     setProfiles(prev => [...prev, createDefaultAPIProfile()]);
+    markDirty();
   };
 
   const handleRemove = (id: string) => {
     setProfiles(prev => prev.filter(api => api.id !== id));
     resetFetchedModels(id);
+    markDirty();
   };
 
   const handleUpdate = (id: string, updates: Partial<APIConfig>) => {
@@ -124,6 +136,7 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
     if (trimmed.textModel !== undefined) trimmed.textModel = trimmed.textModel.trim().replace(/\s+/g, '');
     if (trimmed.imageModel !== undefined) trimmed.imageModel = trimmed.imageModel.trim().replace(/\s+/g, '');
     setProfiles(prev => prev.map(api => api.id === id ? normalizeAPIProfileForUI({ ...api, ...trimmed }) : api));
+    markDirty();
   };
 
   const handleTest = async (kind: 'text' | 'image', api: APIConfig) => {
@@ -159,7 +172,6 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
 
   const handleSaveAll = () => {
     persist();
-    onConfigured?.();
   };
 
   const toggleCollapse = (id: string) => {
@@ -199,6 +211,7 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
       next.splice(toIndex, 0, removed);
       return next;
     });
+    markDirty();
     setDraggedId(null);
     setDragOverId(null);
   };
@@ -244,6 +257,9 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
       });
       if (!res.ok) {
         const errText = await res.text().catch(() => '');
+        if ([404, 405, 501].includes(res.status)) {
+          throw new Error(isZh ? '当前服务不支持 /models，可手动选择模型' : 'This service does not support /models. Select a model manually.');
+        }
         throw new Error(`HTTP ${res.status}${errText ? `: ${errText}` : ''}`);
       }
       const data = await res.json();
@@ -254,8 +270,19 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
 
       setFetchedModels(prev => ({ ...prev, [api.id]: models }));
       fetchedSignaturesRef.current[api.id] = signature;
+      if (models.length === 0) {
+        setFetchErrors(prev => ({
+          ...prev,
+          [api.id]: isZh
+            ? '模型列表已返回，但没有支持的模型（仅支持 gpt-5.4 / gpt-5.5 / gpt-image-2）'
+            : 'Models returned, but none are supported (gpt-5.4 / gpt-5.5 / gpt-image-2 only)',
+        }));
+      }
     } catch (error: any) {
-      setFetchErrors(prev => ({ ...prev, [api.id]: error.message || (isZh ? '获取模型列表失败' : 'Failed to fetch models') }));
+      const message = error?.name === 'TypeError' || /failed to fetch|network/i.test(error?.message || '')
+        ? (isZh ? '网络请求失败，请检查 Base URL、代理或跨域设置' : 'Network request failed. Check Base URL, proxy, or CORS settings.')
+        : (error.message || (isZh ? '获取模型列表失败' : 'Failed to fetch models'));
+      setFetchErrors(prev => ({ ...prev, [api.id]: message }));
     } finally {
       setFetchingModelsId(null);
     }
@@ -312,6 +339,7 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
         <div>{isZh ? '标准化根地址' : 'Normalized root'}: <code className="break-all">{normalized}</code></div>
         <div>{isZh ? '文本' : 'Text'}: <code className="break-all">{buildOpenAICompatibleUrl(api.baseUrl, 'chat/completions')}</code></div>
         <div>{isZh ? '图片' : 'Image'}: <code className="break-all">{buildOpenAICompatibleUrl(api.baseUrl, 'images/generations')}</code></div>
+        <div>{isZh ? '参考图' : 'Image edits'}: <code className="break-all">{buildOpenAICompatibleUrl(api.baseUrl, 'images/edits')}</code></div>
       </div>
     );
   };
@@ -381,18 +409,18 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
             <button
               onClick={() => handleTest('text', api)}
               disabled={testingId === `${api.id}:text` || !api.apiKey.trim() || !api.textEnabled}
-              className="text-[10px] px-1.5 py-0.5 rounded hover:bg-stone-200 dark:hover:bg-stone-600 disabled:opacity-40 text-stone-500 dark:text-stone-400 transition-colors"
+              className="text-[10px] min-w-[52px] px-2 py-1 rounded bg-white dark:bg-stone-900 hover:bg-stone-200 dark:hover:bg-stone-600 disabled:opacity-40 text-stone-500 dark:text-stone-400 transition-colors"
               title={isZh ? '测试文本' : 'Test text'}
             >
-              {testingId === `${api.id}:text` ? '...' : (isZh ? '文' : 'T')}
+              {testingId === `${api.id}:text` ? (isZh ? '测试中' : 'Testing') : (isZh ? '测试文本' : 'Text')}
             </button>
             <button
               onClick={() => handleTest('image', api)}
               disabled={testingId === `${api.id}:image` || !api.apiKey.trim() || !api.imageEnabled}
-              className="text-[10px] px-1.5 py-0.5 rounded hover:bg-stone-200 dark:hover:bg-stone-600 disabled:opacity-40 text-stone-500 dark:text-stone-400 transition-colors"
+              className="text-[10px] min-w-[52px] px-2 py-1 rounded bg-white dark:bg-stone-900 hover:bg-stone-200 dark:hover:bg-stone-600 disabled:opacity-40 text-stone-500 dark:text-stone-400 transition-colors"
               title={isZh ? '测试图片' : 'Test image'}
             >
-              {testingId === `${api.id}:image` ? '...' : (isZh ? '图' : 'I')}
+              {testingId === `${api.id}:image` ? (isZh ? '测试中' : 'Testing') : (isZh ? '测试图片' : 'Image')}
             </button>
             <button
               onClick={() => toggleCollapse(api.id)}
@@ -686,14 +714,36 @@ export default function ApiKeyConfig({ onConfigured, onClose, lang = 'zh' }: Pro
           </div>
         </div>
 
-        <div className="px-4 py-4 sm:px-6 border-t border-stone-200 dark:border-stone-700 flex items-center justify-between gap-3 shrink-0">
-          <p className="text-stone-400 dark:text-stone-500 text-[10px]">
-            {isZh ? 'API Key 仅保存在浏览器本地' : 'API Keys are stored locally in your browser only'}
-          </p>
-          <div className="flex gap-2">
+        <div
+          className="sticky bottom-0 z-20 px-4 py-3 sm:px-6 border-t border-stone-200 dark:border-stone-700 bg-white/95 dark:bg-stone-800/95 backdrop-blur flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0"
+          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+        >
+          <div className="min-w-0">
+            <p className="text-stone-400 dark:text-stone-500 text-[10px]">
+              {isZh ? 'API Key 仅保存在浏览器本地' : 'API Keys are stored locally in your browser only'}
+            </p>
+            <div className="mt-1 flex items-center gap-1.5 text-[11px]">
+              {saveStatus === 'dirty' && (
+                <>
+                  <span className="h-2 w-2 rounded-full bg-amber-500" />
+                  <span className="font-medium text-amber-600 dark:text-amber-400">{isZh ? '有未保存更改' : 'Unsaved changes'}</span>
+                </>
+              )}
+              {saveStatus === 'saved' && (
+                <>
+                  <span className="h-2 w-2 rounded-full bg-green-500" />
+                  <span className="font-medium text-green-600 dark:text-green-400">{isZh ? '已保存' : 'Saved'}</span>
+                </>
+              )}
+              {saveStatus === 'idle' && (
+                <span className="text-stone-400 dark:text-stone-500">{isZh ? '当前无待保存更改' : 'No pending changes'}</span>
+              )}
+            </div>
+          </div>
+          <div className="flex gap-2 sm:justify-end">
             <button
               onClick={handleSaveAll}
-              className="px-5 py-2 bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium rounded-lg transition-colors"
+              className="w-full sm:w-auto px-5 py-2 bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium rounded-lg transition-colors"
             >
               {isZh ? '保存' : 'Save'}
             </button>

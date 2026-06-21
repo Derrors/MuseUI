@@ -6,7 +6,6 @@ import PromptInput from './PromptInput';
 import StyleSelector from './StyleSelector';
 import DesignTokenSelector from './DesignTokenSelector';
 import DesignMdSelector from './DesignMdSelector';
-import BackgroundSelector from './BackgroundSelector';
 import { I18N, UI_STYLES } from '../constants';
 import { LangType, PlatformType, ResolutionPreset, UIStyle, DesignTokens, BackgroundConfig, PageRequest, LayoutElement, CreatorRole, MediaAspectRatio, MediaResolutionPreset, MediaType, SkillConfig, SkillType } from '../types';
 import GenerationFooter from './sidebar/GenerationFooter';
@@ -24,6 +23,9 @@ import { ROLES, RoleIcon } from './RoleSelectorModal';
 
 const SKILL_TYPES: SkillType[] = ['cover-image', 'infographic', 'xhs-images', 'comic', 'article-illustrator', 'slide-deck', 'logo', 'sticker-design'];
 const isSkillRole = (role: CreatorRole) => SKILL_TYPES.includes(role as SkillType);
+const SIDEBAR_SECTION_STORAGE_KEY = 'muse-ui-sidebar-section-state';
+
+type SidebarSectionId = 'content' | 'params' | 'refs';
 
 interface Props {
     // Role
@@ -149,6 +151,22 @@ const AppSidebar: React.FC<Props> = (props) => {
 
     const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
     const roleDropdownRef = useRef<HTMLDivElement>(null);
+    const [expandedSections, setExpandedSections] = useState<Record<SidebarSectionId, boolean>>(() => {
+        try {
+            const stored = localStorage.getItem(SIDEBAR_SECTION_STORAGE_KEY);
+            if (stored) {
+                return {
+                    content: true,
+                    params: true,
+                    refs: false,
+                    ...(JSON.parse(stored) as Partial<Record<SidebarSectionId, boolean>>),
+                };
+            }
+        } catch {
+            // Ignore saved UI state errors.
+        }
+        return { content: true, params: true, refs: false };
+    });
 
     useEffect(() => {
         const handleClick = (e: MouseEvent) => {
@@ -161,6 +179,14 @@ const AppSidebar: React.FC<Props> = (props) => {
             return () => document.removeEventListener('mousedown', handleClick);
         }
     }, [isRoleDropdownOpen]);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(SIDEBAR_SECTION_STORAGE_KEY, JSON.stringify(expandedSections));
+        } catch {
+            // Ignore storage quota and privacy mode failures.
+        }
+    }, [expandedSections]);
 
     const activeRoleDef = ROLES.find(r => r.id === props.activeRole);
 
@@ -250,6 +276,81 @@ const AppSidebar: React.FC<Props> = (props) => {
     const isGame = props.activeRole === 'game';
     const isSkill = isSkillRole(props.activeRole);
     const isFree = props.activeRole === 'free';
+    const isStickerDesign = props.activeRole === 'sticker-design';
+    const showGlobalReferences = !isFree && !isStickerDesign;
+
+    const sectionLabels: Record<SidebarSectionId, { zh: string; en: string; hintZh: string; hintEn: string }> = {
+        content: {
+            zh: '内容',
+            en: 'Content',
+            hintZh: '提示词、页面与批量生成',
+            hintEn: 'Prompt, pages, and batches',
+        },
+        params: {
+            zh: '风格与参数',
+            en: 'Style & Parameters',
+            hintZh: '当前模式的生成控制',
+            hintEn: 'Generation controls for this mode',
+        },
+        refs: {
+            zh: '参考与输出',
+            en: 'References & Output',
+            hintZh: '参考图、布局和设计令牌',
+            hintEn: 'References, layout, and tokens',
+        },
+    };
+
+    const toggleSection = (id: SidebarSectionId) => {
+        setExpandedSections(prev => ({ ...prev, [id]: !prev[id] }));
+    };
+
+    const modeSummary = props.lang === 'zh'
+        ? (activeRoleDef?.label_zh || '当前模式')
+        : (activeRoleDef?.label || 'Current mode');
+    const outputSummary = props.isBatchMode
+        ? (props.lang === 'zh' ? '批量输出' : 'Batch output')
+        : isDesigner
+            ? (props.lang === 'zh' ? 'UI 画板' : 'UI artboard')
+            : isMedia
+                ? (props.lang === 'zh' ? '图片资产' : 'Image asset')
+                : isSkill
+                    ? (props.lang === 'zh' ? '技能资产' : 'Skill asset')
+                    : (props.lang === 'zh' ? '自由生成' : 'Free generation');
+
+    const renderSidebarSection = (id: SidebarSectionId, children: React.ReactNode, hidden = false) => {
+        if (hidden) return null;
+        const isOpen = expandedSections[id];
+        const label = sectionLabels[id];
+        return (
+            <section className="rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 overflow-hidden shadow-sm">
+                <button
+                    type="button"
+                    onClick={() => toggleSection(id)}
+                    className="w-full flex items-center justify-between gap-3 px-3 py-3 text-left hover:bg-stone-50 dark:hover:bg-stone-800/70 transition-colors"
+                    aria-expanded={isOpen}
+                >
+                    <span className="min-w-0">
+                        <span className="block text-sm font-bold text-stone-800 dark:text-stone-100">
+                            {props.lang === 'zh' ? label.zh : label.en}
+                        </span>
+                        <span className="block mt-0.5 text-[10px] text-stone-400 dark:text-stone-500 truncate">
+                            {props.lang === 'zh' ? label.hintZh : label.hintEn}
+                        </span>
+                    </span>
+                    <IconLoader
+                        name="chevron-down"
+                        size={14}
+                        className={`text-stone-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                    />
+                </button>
+                {isOpen && (
+                    <div className="px-3 pb-4 pt-1 space-y-5 border-t border-stone-100 dark:border-stone-800">
+                        {children}
+                    </div>
+                )}
+            </section>
+        );
+    };
 
     return (
         <div className="w-full md:w-[360px] bg-white dark:bg-stone-900 border-r border-stone-200 dark:border-stone-800 flex flex-col shrink-0 min-w-0">
@@ -312,331 +413,319 @@ const AppSidebar: React.FC<Props> = (props) => {
                     </button>
                 </div>
 
-                {isDesigner && (
-                    <PlatformSelector
-                        selectedPlatform={props.platform}
-                        selectedResolution={props.resolution}
-                        onSelectPlatform={props.setPlatform}
-                        onSelectResolution={props.setResolution}
-                        customSize={props.customSize}
-                        onCustomSizeChange={props.setCustomSize}
+                {renderSidebarSection('content', (
+                    <PromptInput
+                        description={props.description}
+                        onDescriptionChange={props.setDescription}
+                        pageName={props.pageName}
+                        onPageNameChange={props.setPageName}
+                        keywords={props.keywords}
+                        onKeywordsChange={props.setKeywords}
+                        pages={props.pages}
+                        onPagesChange={props.setPages}
+                        isBatchMode={props.isBatchMode}
+                        onBatchModeChange={props.setIsBatchMode}
+                        onAutoGeneratePages={props.onAutoGeneratePages}
+                        isAutoGenerating={props.isAutoGeneratingPages}
                         lang={props.lang}
+                        onOpenPageBuilder={props.onOpenPageBuilder}
+                        onAddNotification={props.onAddNotification}
+                        onAiGenerateDescription={props.onAiGenerateDescription}
+                        isAiGeneratingDescription={props.isAiGeneratingDescription}
                     />
-                )}
+                ))}
 
-                {isMedia && (
-                    <MediaSelector
-                        aspectRatio={props.mediaAspectRatio}
-                        resolution={props.mediaResolution}
-                        mediaType={props.mediaType}
-                        onAspectRatioChange={props.setMediaAspectRatio}
-                        onResolutionChange={props.setMediaResolution}
-                        onMediaTypeChange={props.setMediaType}
-                        customSize={props.customSize}
-                        onCustomSizeChange={props.setCustomSize}
-                        lang={props.lang}
-                    />
-                )}
-
-                {/* Skill Panels */}
-                {isSkill && props.skillConfig && (
+                {renderSidebarSection('params', (
                     <>
-                        {props.activeRole === 'cover-image' && props.skillConfig.coverImage && (
-                            <CoverImagePanel
-                                config={props.skillConfig.coverImage}
-                                onChange={(cfg) => props.onSkillConfigChange?.({ ...props.skillConfig!, coverImage: cfg })}
-                                lang={props.lang}
-                            />
-                        )}
-                        {props.activeRole === 'infographic' && props.skillConfig.infographic && (
-                            <InfographicPanel
-                                config={props.skillConfig.infographic}
-                                onChange={(cfg) => props.onSkillConfigChange?.({ ...props.skillConfig!, infographic: cfg })}
-                                lang={props.lang}
-                            />
-                        )}
-                        {props.activeRole === 'xhs-images' && props.skillConfig.xhsImages && (
-                            <XHSImagesPanel
-                                config={props.skillConfig.xhsImages}
-                                onChange={(cfg) => props.onSkillConfigChange?.({ ...props.skillConfig!, xhsImages: cfg })}
-                                lang={props.lang}
-                            />
-                        )}
-                        {props.activeRole === 'comic' && props.skillConfig.comic && (
-                            <ComicPanel
-                                config={props.skillConfig.comic}
-                                onChange={(cfg) => props.onSkillConfigChange?.({ ...props.skillConfig!, comic: cfg })}
-                                lang={props.lang}
-                            />
-                        )}
-                        {props.activeRole === 'article-illustrator' && props.skillConfig.articleIllustrator && (
-                            <ArticleIllustratorPanel
-                                config={props.skillConfig.articleIllustrator}
-                                onChange={(cfg) => props.onSkillConfigChange?.({ ...props.skillConfig!, articleIllustrator: cfg })}
-                                lang={props.lang}
-                            />
-                        )}
-                        {props.activeRole === 'slide-deck' && props.skillConfig.slideDeck && (
-                            <SlideDeckPanel
-                                config={props.skillConfig.slideDeck}
-                                onChange={(cfg) => props.onSkillConfigChange?.({ ...props.skillConfig!, slideDeck: cfg })}
-                                lang={props.lang}
-                            />
-                        )}
-                        {props.activeRole === 'logo' && props.skillConfig.logo && (
-                            <LogoPanel
-                                config={props.skillConfig.logo}
-                                onChange={(cfg) => props.onSkillConfigChange?.({ ...props.skillConfig!, logo: cfg })}
-                                lang={props.lang}
-                            />
-                        )}
-                        {props.activeRole === 'sticker-design' && props.skillConfig.stickerDesign && (
-                            <StickerDesignPanel
-                                config={props.skillConfig.stickerDesign}
-                                onChange={(cfg) => props.onSkillConfigChange?.({ ...props.skillConfig!, stickerDesign: cfg })}
-                                lang={props.lang}
-                            />
-                        )}
-                    </>
-                )}
-
-                <div className="h-px bg-stone-100 dark:bg-stone-800"></div>
-
-                <PromptInput
-                    description={props.description}
-                    onDescriptionChange={props.setDescription}
-                    pageName={props.pageName}
-                    onPageNameChange={props.setPageName}
-                    keywords={props.keywords}
-                    onKeywordsChange={props.setKeywords}
-                    pages={props.pages}
-                    onPagesChange={props.setPages}
-                    isBatchMode={props.isBatchMode}
-                    onBatchModeChange={props.setIsBatchMode}
-                    onAutoGeneratePages={props.onAutoGeneratePages}
-                    isAutoGenerating={props.isAutoGeneratingPages}
-                    lang={props.lang}
-                    onOpenPageBuilder={props.onOpenPageBuilder}
-                    onAddNotification={props.onAddNotification}
-                    onAiGenerateDescription={props.onAiGenerateDescription}
-                    isAiGeneratingDescription={props.isAiGeneratingDescription}
-                />
-
-                <div className="h-px bg-stone-100 dark:bg-stone-800"></div>
-
-                {!isSkill && !isFree && (
-                    <StyleSelector
-                        selectedStyle={props.style}
-                        onSelectStyle={props.setStyle}
-                        customStyles={props.customStyles}
-                        onAddCustomStyle={(s) => props.setCustomStyles(prev => [...prev, s])}
-                        lang={props.lang}
-                    />
-                )}
-
-                {(isDesigner || isMedia) && (!isSkill) && (
-                    <>
-                        {/* Design.md Template Selector */}
-                        {isDesigner && (
-                            <DesignMdSelector
-                                selectedId={props.designMdId}
-                                onSelect={(id, content) => {
-                                    props.setDesignMdId(id);
-                                    props.setDesignMdContent(content);
-                                }}
-                                lang={props.lang}
-                            />
-                        )}
-
-                        {/* Visual Style Template Selector */}
-                        <DesignMdSelector
-                            variant="visual"
-                            selectedId={props.visualStyleId}
-                            onSelect={(id, content) => {
-                                props.setVisualStyleId(id);
-                                props.setVisualStyleContent(content);
-                            }}
+                    {isDesigner && (
+                        <PlatformSelector
+                            selectedPlatform={props.platform}
+                            selectedResolution={props.resolution}
+                            onSelectPlatform={props.setPlatform}
+                            onSelectResolution={props.setResolution}
+                            customSize={props.customSize}
+                            onCustomSizeChange={props.setCustomSize}
                             lang={props.lang}
                         />
+                    )}
 
-                        {/* Layout Density Selector */}
-                        {isDesigner && (
+                    {isMedia && (
+                        <MediaSelector
+                            aspectRatio={props.mediaAspectRatio}
+                            resolution={props.mediaResolution}
+                            mediaType={props.mediaType}
+                            onAspectRatioChange={props.setMediaAspectRatio}
+                            onResolutionChange={props.setMediaResolution}
+                            onMediaTypeChange={props.setMediaType}
+                            customSize={props.customSize}
+                            onCustomSizeChange={props.setCustomSize}
+                            lang={props.lang}
+                        />
+                    )}
+
+                    {isSkill && props.skillConfig && (
+                        <>
+                            {props.activeRole === 'cover-image' && props.skillConfig.coverImage && (
+                                <CoverImagePanel
+                                    config={props.skillConfig.coverImage}
+                                    onChange={(cfg) => props.onSkillConfigChange?.({ ...props.skillConfig!, coverImage: cfg })}
+                                    lang={props.lang}
+                                />
+                            )}
+                            {props.activeRole === 'infographic' && props.skillConfig.infographic && (
+                                <InfographicPanel
+                                    config={props.skillConfig.infographic}
+                                    onChange={(cfg) => props.onSkillConfigChange?.({ ...props.skillConfig!, infographic: cfg })}
+                                    lang={props.lang}
+                                />
+                            )}
+                            {props.activeRole === 'xhs-images' && props.skillConfig.xhsImages && (
+                                <XHSImagesPanel
+                                    config={props.skillConfig.xhsImages}
+                                    onChange={(cfg) => props.onSkillConfigChange?.({ ...props.skillConfig!, xhsImages: cfg })}
+                                    lang={props.lang}
+                                />
+                            )}
+                            {props.activeRole === 'comic' && props.skillConfig.comic && (
+                                <ComicPanel
+                                    config={props.skillConfig.comic}
+                                    onChange={(cfg) => props.onSkillConfigChange?.({ ...props.skillConfig!, comic: cfg })}
+                                    lang={props.lang}
+                                />
+                            )}
+                            {props.activeRole === 'article-illustrator' && props.skillConfig.articleIllustrator && (
+                                <ArticleIllustratorPanel
+                                    config={props.skillConfig.articleIllustrator}
+                                    onChange={(cfg) => props.onSkillConfigChange?.({ ...props.skillConfig!, articleIllustrator: cfg })}
+                                    lang={props.lang}
+                                />
+                            )}
+                            {props.activeRole === 'slide-deck' && props.skillConfig.slideDeck && (
+                                <SlideDeckPanel
+                                    config={props.skillConfig.slideDeck}
+                                    onChange={(cfg) => props.onSkillConfigChange?.({ ...props.skillConfig!, slideDeck: cfg })}
+                                    lang={props.lang}
+                                />
+                            )}
+                            {props.activeRole === 'logo' && props.skillConfig.logo && (
+                                <LogoPanel
+                                    config={props.skillConfig.logo}
+                                    onChange={(cfg) => props.onSkillConfigChange?.({ ...props.skillConfig!, logo: cfg })}
+                                    lang={props.lang}
+                                />
+                            )}
+                            {props.activeRole === 'sticker-design' && props.skillConfig.stickerDesign && (
+                                <StickerDesignPanel
+                                    config={props.skillConfig.stickerDesign}
+                                    onChange={(cfg) => props.onSkillConfigChange?.({ ...props.skillConfig!, stickerDesign: cfg })}
+                                    lang={props.lang}
+                                />
+                            )}
+                        </>
+                    )}
+
+                    {!isSkill && !isFree && (
+                        <StyleSelector
+                            selectedStyle={props.style}
+                            onSelectStyle={props.setStyle}
+                            customStyles={props.customStyles}
+                            onAddCustomStyle={(s) => props.setCustomStyles(prev => [...prev, s])}
+                            lang={props.lang}
+                        />
+                    )}
+
+                    {(isDesigner || isMedia) && (!isSkill) && (
+                        <>
+                            {isDesigner && (
+                                <DesignMdSelector
+                                    selectedId={props.designMdId}
+                                    onSelect={(id, content) => {
+                                        props.setDesignMdId(id);
+                                        props.setDesignMdContent(content);
+                                    }}
+                                    lang={props.lang}
+                                />
+                            )}
+
                             <DesignMdSelector
-                                variant="layout"
-                                selectedId={props.layoutDensityId}
+                                variant="visual"
+                                selectedId={props.visualStyleId}
                                 onSelect={(id, content) => {
-                                    props.setLayoutDensityId(id);
-                                    props.setLayoutDensityContent(content);
+                                    props.setVisualStyleId(id);
+                                    props.setVisualStyleContent(content);
                                 }}
                                 lang={props.lang}
                             />
-                        )}
+
+                            {isDesigner && (
+                                <DesignMdSelector
+                                    variant="layout"
+                                    selectedId={props.layoutDensityId}
+                                    onSelect={(id, content) => {
+                                        props.setLayoutDensityId(id);
+                                        props.setLayoutDensityContent(content);
+                                    }}
+                                    lang={props.lang}
+                                />
+                            )}
+                        </>
+                    )}
                     </>
-                )}
+                ))}
 
-                {!isFree && (
-                <>
-                {/* 2 Slot Reference Section */}
-                <div>
-                    <label className="block text-sm font-medium text-stone-600 dark:text-stone-400 mb-3">
-                        {props.lang === 'zh' ? '参考图设定' : 'Reference Inputs'}
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                        {/* Slot 1: Color */}
-                        <ImageSlot
-                            label={props.lang === 'zh' ? '1. 颜色' : '1. Color'}
-                            file={props.colorImage}
-                            onRemove={() => props.setColorImage(null)}
-                            onClick={() => colorInputRef.current?.click()}
-                            placeholderIcon="palette"
-                        />
-                        <input type="file" ref={colorInputRef} hidden accept="image/*" onChange={(e) => handleImageUpload(e, props.setColorImage)} />
+                {renderSidebarSection('refs', (
+                    <>
+                    {showGlobalReferences && (
+                        <>
+                            <div>
+                                <label className="block text-sm font-medium text-stone-600 dark:text-stone-400 mb-3">
+                                    {props.lang === 'zh' ? '参考图设定' : 'Reference Inputs'}
+                                </label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <ImageSlot
+                                        label={props.lang === 'zh' ? '1. 颜色' : '1. Color'}
+                                        file={props.colorImage}
+                                        onRemove={() => props.setColorImage(null)}
+                                        onClick={() => colorInputRef.current?.click()}
+                                        placeholderIcon="palette"
+                                    />
+                                    <input type="file" ref={colorInputRef} hidden accept="image/*" onChange={(e) => handleImageUpload(e, props.setColorImage)} />
 
-                        {/* Slot 2: Layout */}
-                        <ImageSlot
-                            label={props.lang === 'zh' ? '2. 布局' : '2. Layout'}
-                            file={null}
-                            customContent={
-                                props.layoutImage ? (
-                                    <>
-                                        <img src={props.layoutImage} className="w-full h-full object-contain p-1" />
-                                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                                            <button
-                                                onClick={() => props.onOpenPageBuilder(null)}
-                                                className="text-white text-[10px] bg-stone-700 px-2 py-1 rounded hover:bg-stone-600 w-16"
-                                            >
-                                                {props.lang === 'zh' ? '构建器' : 'Builder'}
-                                            </button>
-                                            <button
-                                                onClick={() => layoutInputRef.current?.click()}
-                                                className="text-white text-[10px] bg-stone-700 px-2 py-1 rounded hover:bg-stone-600 w-16"
-                                            >
-                                                {props.lang === 'zh' ? '换图' : 'Replace'}
-                                            </button>
-                                            <button
-                                                onClick={() => { props.setLayoutImage(null); props.setLayoutElements([]); }}
-                                                className="text-red-300 text-[10px] hover:text-red-200 mt-1"
-                                            >
-                                                {props.lang === 'zh' ? '移除' : 'Remove'}
-                                            </button>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div className="w-full h-full flex flex-col items-center justify-center p-1 gap-1">
+                                    <ImageSlot
+                                        label={props.lang === 'zh' ? '2. 布局' : '2. Layout'}
+                                        file={null}
+                                        customContent={
+                                            props.layoutImage ? (
+                                                <>
+                                                    <img src={props.layoutImage} className="w-full h-full object-contain p-1" />
+                                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                                                        <button
+                                                            onClick={() => props.onOpenPageBuilder(null)}
+                                                            className="text-white text-[10px] bg-stone-700 px-2 py-1 rounded hover:bg-stone-600 w-16"
+                                                        >
+                                                            {props.lang === 'zh' ? '构建器' : 'Builder'}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => layoutInputRef.current?.click()}
+                                                            className="text-white text-[10px] bg-stone-700 px-2 py-1 rounded hover:bg-stone-600 w-16"
+                                                        >
+                                                            {props.lang === 'zh' ? '换图' : 'Replace'}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => { props.setLayoutImage(null); props.setLayoutElements([]); }}
+                                                            className="text-red-300 text-[10px] hover:text-red-200 mt-1"
+                                                        >
+                                                            {props.lang === 'zh' ? '移除' : 'Remove'}
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="w-full h-full flex flex-col items-center justify-center p-1 gap-1">
+                                                    <button
+                                                        onClick={() => props.onOpenPageBuilder(null)}
+                                                        className="w-full flex-1 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded text-[9px] text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 flex items-center justify-center gap-1"
+                                                    >
+                                                        <IconLoader name="layout" size={12} /> {props.lang === 'zh' ? '构建器' : 'Builder'}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => layoutInputRef.current?.click()}
+                                                        className="w-full flex-1 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded text-[9px] text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 flex items-center justify-center gap-1"
+                                                    >
+                                                        <IconLoader name="upload" size={12} /> {props.lang === 'zh' ? '上传图' : 'Upload'}
+                                                    </button>
+                                                </div>
+                                            )
+                                        }
+                                    />
+                                    <input type="file" ref={layoutInputRef} hidden accept="image/*" onChange={handleLayoutUpload} />
+                                </div>
+
+                                {props.layoutImage && (
+                                    <div className="mt-2 flex justify-end">
                                         <button
-                                            onClick={() => props.onOpenPageBuilder(null)}
-                                            className="w-full flex-1 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded text-[9px] text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 flex items-center justify-center gap-1"
+                                            onClick={props.onAnalyzeLayout}
+                                            disabled={props.isAnalyzingLayout}
+                                            className={`text-[10px] flex items-center gap-1 px-2 py-1 rounded transition-colors ${props.layoutAnalysis
+                                                ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400'
+                                                : 'bg-teal-50 text-teal-500 hover:text-teal-600 dark:bg-teal-900/20'
+                                                }`}
                                         >
-                                            <IconLoader name="layout" size={12} /> {props.lang === 'zh' ? '构建器' : 'Builder'}
-                                        </button>
-                                        <button
-                                            onClick={() => layoutInputRef.current?.click()}
-                                            className="w-full flex-1 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded text-[9px] text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 flex items-center justify-center gap-1"
-                                        >
-                                            <IconLoader name="upload" size={12} /> {props.lang === 'zh' ? '上传图' : 'Upload'}
+                                            {props.isAnalyzingLayout ? (
+                                                <IconLoader name="refresh" className="animate-spin" size={10} />
+                                            ) : props.layoutAnalysis ? (
+                                                <>
+                                                    <IconLoader name="check" size={10} />
+                                                    <span>{props.lang === 'zh' ? '已分析 (点击重试)' : 'Analyzed (Click to redo)'}</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <IconLoader name="search" size={10} />
+                                                    <span>{props.lang === 'zh' ? 'AI 分析布局结构' : 'AI Analyze Structure'}</span>
+                                                </>
+                                            )}
                                         </button>
                                     </div>
-                                )
-                            }
-                        />
-                        <input type="file" ref={layoutInputRef} hidden accept="image/*" onChange={handleLayoutUpload} />
-                    </div>
-
-                    {/* Analyze Layout Button */}
-                    {props.layoutImage && (
-                        <div className="mt-2 flex justify-end">
-                            <button
-                                onClick={props.onAnalyzeLayout}
-                                disabled={props.isAnalyzingLayout}
-                                className={`text-[10px] flex items-center gap-1 px-2 py-1 rounded transition-colors ${props.layoutAnalysis
-                                    ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400'
-                                    : 'bg-teal-50 text-teal-500 hover:text-teal-600 dark:bg-teal-900/20'
-                                    }`}
-                            >
-                                {props.isAnalyzingLayout ? (
-                                    <IconLoader name="refresh" className="animate-spin" size={10} />
-                                ) : props.layoutAnalysis ? (
-                                    <>
-                                        <IconLoader name="check" size={10} />
-                                        <span>{props.lang === 'zh' ? '已分析 (点击重试)' : 'Analyzed (Click to redo)'}</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <IconLoader name="search" size={10} />
-                                        <span>{props.lang === 'zh' ? 'AI 分析布局结构' : 'AI Analyze Structure'}</span>
-                                    </>
                                 )}
-                            </button>
-                        </div>
-                    )}
-                </div>
-                </>)}
-
-                {!isFree && (
-                <>
-                {/* Reference Images Section */}
-                <div>
-                    <label className="block text-sm font-medium text-stone-600 dark:text-stone-400 mb-3">
-                        {props.lang === 'zh' ? '参考图 (最多 2 张)' : 'Reference Images (max 2)'}
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                        {[0, 1].map(idx => (
-                            <div key={idx} className="flex flex-col gap-1">
-                                <span className="text-[10px] font-bold text-stone-500 uppercase">
-                                    {props.lang === 'zh' ? `参考 ${idx + 1}` : `Ref ${idx + 1}`}
-                                </span>
-                                <div className="relative group w-full h-24 border border-dashed border-stone-300 dark:border-stone-700 rounded-lg overflow-hidden bg-stone-50 dark:bg-stone-900 hover:border-teal-500 transition-colors">
-                                    {props.referenceImages[idx] ? (
-                                        <>
-                                            <img src={props.referenceImages[idx]} className="w-full h-full object-cover opacity-80" />
-                                            <button
-                                                onClick={() => removeRefImage(idx)}
-                                                className="absolute top-1 right-1 bg-white text-stone-800 rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-stone-100"
-                                            >
-                                                <IconLoader name="close" size={12} />
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <div className="w-full h-full flex flex-col items-center justify-center gap-1 cursor-pointer" onClick={() => props.referenceImages.length <= idx && refImageInputRef.current?.click()}>
-                                            <IconLoader name="upload" size={16} className="text-stone-400" />
-                                            <span className="text-[9px] text-stone-400">{props.lang === 'zh' ? '上传' : 'Upload'}</span>
-                                            {props.copiedImageBase64 && (
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handlePasteRefImage(); }}
-                                                    className="text-[9px] bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 px-2 py-0.5 rounded hover:bg-teal-200 dark:hover:bg-teal-900/50 font-bold"
-                                                >
-                                                    {props.lang === 'zh' ? '粘贴' : 'Paste'}
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
                             </div>
-                        ))}
-                    </div>
-                    <input type="file" ref={refImageInputRef} hidden accept="image/*" onChange={handleRefImageUpload} />
-                </div>
-                </>)}
 
-                {!isFree && <div className="h-px bg-stone-100 dark:bg-stone-800"></div>}
+                            <div>
+                                <label className="block text-sm font-medium text-stone-600 dark:text-stone-400 mb-3">
+                                    {props.lang === 'zh' ? '参考图 (最多 2 张)' : 'Reference Images (max 2)'}
+                                </label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {[0, 1].map(idx => (
+                                        <div key={idx} className="flex flex-col gap-1">
+                                            <span className="text-[10px] font-bold text-stone-500 uppercase">
+                                                {props.lang === 'zh' ? `参考 ${idx + 1}` : `Ref ${idx + 1}`}
+                                            </span>
+                                            <div className="relative group w-full h-24 border border-dashed border-stone-300 dark:border-stone-700 rounded-lg overflow-hidden bg-stone-50 dark:bg-stone-900 hover:border-teal-500 transition-colors">
+                                                {props.referenceImages[idx] ? (
+                                                    <>
+                                                        <img src={props.referenceImages[idx]} className="w-full h-full object-cover opacity-80" />
+                                                        <button
+                                                            onClick={() => removeRefImage(idx)}
+                                                            className="absolute top-1 right-1 bg-white text-stone-800 rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-stone-100"
+                                                        >
+                                                            <IconLoader name="close" size={12} />
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <div className="w-full h-full flex flex-col items-center justify-center gap-1 cursor-pointer" onClick={() => props.referenceImages.length <= idx && refImageInputRef.current?.click()}>
+                                                        <IconLoader name="upload" size={16} className="text-stone-400" />
+                                                        <span className="text-[9px] text-stone-400">{props.lang === 'zh' ? '上传' : 'Upload'}</span>
+                                                        {props.copiedImageBase64 && (
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); handlePasteRefImage(); }}
+                                                                className="text-[9px] bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 px-2 py-0.5 rounded hover:bg-teal-200 dark:hover:bg-teal-900/50 font-bold"
+                                                            >
+                                                                {props.lang === 'zh' ? '粘贴' : 'Paste'}
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <input type="file" ref={refImageInputRef} hidden accept="image/*" onChange={handleRefImageUpload} />
+                            </div>
+                        </>
+                    )}
 
-                {isDesigner && (
-                    <DesignTokenSelector
-                        tokens={props.designTokens}
-                        onChange={props.setDesignTokens}
-                        enabled={props.enableDesignTokens}
-                        onToggle={props.setEnableDesignTokens}
-                        lang={props.lang}
-                    />
-                )}
-
-                {/* <BackgroundSelector
-                    background={props.background}
-                    onChange={props.setBackground}
-                    lang={props.lang}
-                />
-
-                <div className="h-20"></div> */}
+                    {isDesigner && (
+                        <>
+                            {showGlobalReferences && <div className="h-px bg-stone-100 dark:bg-stone-800" />}
+                            <DesignTokenSelector
+                                tokens={props.designTokens}
+                                onChange={props.setDesignTokens}
+                                enabled={props.enableDesignTokens}
+                                onToggle={props.setEnableDesignTokens}
+                                lang={props.lang}
+                            />
+                        </>
+                    )}
+                    </>
+                ), !showGlobalReferences && !isDesigner)}
             </div>
 
             <GenerationFooter
@@ -646,6 +735,8 @@ const AppSidebar: React.FC<Props> = (props) => {
                 preferredImageApiId={props.preferredImageApiId}
                 setPromptLanguage={props.setPromptLanguage}
                 setPreferredImageApiId={props.setPreferredImageApiId}
+                modeSummary={modeSummary}
+                outputSummary={outputSummary}
                 onPrepareGeneration={props.onPrepareGeneration}
                 isGenerating={props.isGenerating}
                 batchProgress={props.batchProgress}
